@@ -1,0 +1,10 @@
+{
+  "displayId": "镜",
+  "internalId": "gold_rimmed_glasses",
+  "texture": "gold_rimmed_glasses.png",
+  "tint": "#322940",
+  "size": { "w": 2, "h": 1 },
+  "category": "收藏品",
+  "name": "金丝边眼镜",
+  "desc": "2格(2×1)"
+}

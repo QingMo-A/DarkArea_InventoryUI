@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory UI (Empty Left, Items in Right Container)</title>
+  <link rel="stylesheet" href="./src/styles/main.css" />
+</head>
+<body>
+  <div class="stage">
+    <div class="topbar">
+      <div class="pill">整备</div>
+      <div class="pill">任务</div>
+      <div class="pill">地图</div>
+      <div class="spacer"></div>
+      <div class="pill">19:53</div>
+    </div>
+
+    <div class="layout">
+      <div class="left">
+        <div class="panel">
+          <div class="panel-title">装备</div>
+          <div class="panel-body">
+            <div class="detail">装备区先略（你要的重点已在右1/2物品区）。</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">物品</div>
+          <div class="panel-body">
+            <div class="controls">
+              <label>口袋
+                <select id="pocketsSel">
+                  <option value="4x1">固定 4格（4×1）</option>
+                </select>
+              </label>
+              <label>弹挂
+                <select id="rigSel">
+                  <option value="4x3">小（4×3）</option>
+                  <option value="5x4">中（5×4）</option>
+                  <option value="6x4">大（6×4）</option>
+                </select>
+              </label>
+              <label>背包
+                <select id="bagSel">
+                  <option value="6x5">小（6×5）</option>
+                  <option value="7x6">中（7×6）</option>
+                  <option value="8x7">大（8×7）</option>
+                </select>
+              </label>
+              <label>安全箱
+                <select id="secureSel">
+                  <option value="2x1">2格</option>
+                  <option value="2x2">4格</option>
+                  <option value="3x2">6格</option>
+                  <option value="4x2">8格</option>
+                  <option value="3x3">9格</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="invLayout"></div>
+
+            <div class="detail" id="invDetail">
+              左侧默认无物品（全空）。图钉启用后：保险会被分到 VBox2（在下面）。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel right">
+        <div class="panel-title" id="containerTitle">防寒大衣（容器）</div>
+        <div class="panel-body">
+          <div class="controls">
+            <label>容器规格
+              <select id="containerSel">
+                <option value="4x5">小（4×5）</option>
+                <option value="5x6">中（5×6）</option>
+                <option value="6x7">大（6×7）</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="grid" id="containerGrid"></div>
+
+          <div class="detail" id="containerDetail">
+            右侧容器里有物品（多格示例）。点击物品查看信息。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('error', function (event) {
+      var detail = document.getElementById('containerDetail');
+      if (!detail) return;
+      var message = event.error && event.error.stack ? event.error.stack : (event.message || 'unknown error');
+      detail.innerHTML = '<b>脚本加载失败：</b><pre style="white-space:pre-wrap;word-break:break-word;">' + String(message).replace(/</g, '&lt;') + '</pre>';
+    });
+  </script>
+  <script defer src="./src/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "displayId": "剂",
+  "internalId": "ideal_state_reagent_kit",
+  "texture": "ideal_state_reagent_kit.png",
+  "tint": "#59211B",
+  "size": { "w": 3, "h": 2 },
+  "category": "收藏品",
+  "name": "\"理想国\"",
+  "desc": "6格(3×2)"
+}

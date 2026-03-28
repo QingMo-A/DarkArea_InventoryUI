@@ -1,0 +1,10 @@
+{
+  "displayId": "消",
+  "internalId": "disinfectant",
+  "texture": "disinfectant.png",
+  "tint": "transparent",
+  "size": { "w": 1, "h": 1 },
+  "category": "医疗杂物",
+  "name": "消毒水",
+  "desc": "1格"
+}

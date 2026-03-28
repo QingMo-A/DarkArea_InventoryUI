@@ -1,0 +1,10 @@
+{
+  "displayId": "燃",
+  "internalId": "high_energy_fuel",
+  "texture": "high_energy_fuel.png",
+  "tint": "#4C300F",
+  "size": { "w": 2, "h": 2 },
+  "category": "易燃物",
+  "name": "高能燃料",
+  "desc": "4格(2×2)"
+}

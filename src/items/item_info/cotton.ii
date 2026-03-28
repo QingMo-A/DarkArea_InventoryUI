@@ -1,0 +1,10 @@
+{
+  "displayId": "布",
+  "internalId": "cotton",
+  "texture": "cotton.png",
+  "tint": "#1A354F",
+  "size": { "w": 1, "h": 2 },
+  "category": "生活用品",
+  "name": "棉布",
+  "desc": "2格(1×2)"
+}
