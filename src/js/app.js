@@ -11,9 +11,138 @@
     return { cell, gap };
   }
 
-  function getCellFromEvent(grid, cols, rows, event) {
-    const rect = grid.getBoundingClientRect();
-    const { cell, gap } = getCellSize(grid);
+  function makeCellKey(x, y) {
+    return `${x}:${y}`;
+  }
+
+  function normalizeFootprint(footprint) {
+    if (!Array.isArray(footprint) || footprint.length === 0) {
+      return null;
+    }
+
+    return footprint
+      .map((cell) => {
+        if (Array.isArray(cell) && cell.length >= 2) {
+          return { x: Number(cell[0]), y: Number(cell[1]) };
+        }
+        if (cell && typeof cell === "object") {
+          return { x: Number(cell.x), y: Number(cell.y) };
+        }
+        return null;
+      })
+      .filter((cell) => cell && Number.isInteger(cell.x) && Number.isInteger(cell.y));
+  }
+
+  function getItemFootprint(item) {
+    if (Array.isArray(item.footprint) && item.footprint.length) {
+      return item.footprint;
+    }
+
+    const cells = [];
+    for (let row = 0; row < item.h; row += 1) {
+      for (let col = 0; col < item.w; col += 1) {
+        cells.push({ x: col, y: row });
+      }
+    }
+    return cells;
+  }
+
+  function createSlotGrid(config) {
+    const { cols, rows, cellFactory } = config;
+    const slots = [];
+
+    for (let row = 0; row < rows; row += 1) {
+      const rowSlots = [];
+      for (let col = 0; col < cols; col += 1) {
+        const baseLinks = {
+          up: row > 0,
+          right: col < cols - 1,
+          down: row < rows - 1,
+          left: col > 0
+        };
+        const overrides = cellFactory ? cellFactory({ col, row, cols, rows }) : null;
+        const enabled = !(overrides && overrides.enabled === false);
+        rowSlots.push({
+          col,
+          row,
+          enabled,
+          links: enabled ? {
+            up: overrides && overrides.links && typeof overrides.links.up === "boolean" ? overrides.links.up : baseLinks.up,
+            right: overrides && overrides.links && typeof overrides.links.right === "boolean" ? overrides.links.right : baseLinks.right,
+            down: overrides && overrides.links && typeof overrides.links.down === "boolean" ? overrides.links.down : baseLinks.down,
+            left: overrides && overrides.links && typeof overrides.links.left === "boolean" ? overrides.links.left : baseLinks.left
+          } : {
+            up: false,
+            right: false,
+            down: false,
+            left: false
+          }
+        });
+      }
+      slots.push(rowSlots);
+    }
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const slot = slots[row][col];
+        if (!slot.enabled) {
+          continue;
+        }
+
+        const left = col > 0 ? slots[row][col - 1] : null;
+        const top = row > 0 ? slots[row - 1][col] : null;
+        const right = col + 1 < cols ? slots[row][col + 1] : null;
+        const down = row + 1 < rows ? slots[row + 1][col] : null;
+
+        slot.links.left = !!(left && left.enabled && slot.links.left && left.links.right);
+        slot.links.up = !!(top && top.enabled && slot.links.up && top.links.down);
+        slot.links.right = !!(right && right.enabled && slot.links.right && right.links.left);
+        slot.links.down = !!(down && down.enabled && slot.links.down && down.links.up);
+
+        if (right) {
+          right.links.left = slot.links.right;
+        }
+        if (down) {
+          down.links.up = slot.links.down;
+        }
+      }
+    }
+
+    return { cols, rows, slots };
+  }
+
+  const GRID_LAYOUTS = {
+    default({ cols, rows }) {
+      return createSlotGrid({ cols, rows });
+    },
+    pockets({ cols, rows }) {
+      return createSlotGrid({
+        cols,
+        rows,
+        cellFactory() {
+          return {
+            links: { up: false, right: false, down: false, left: false }
+          };
+        }
+      });
+    }
+  };
+
+  function buildGridModel(id, cols, rows) {
+    const builder = GRID_LAYOUTS[id] || GRID_LAYOUTS.default;
+    return builder({ cols, rows });
+  }
+
+  function getSlot(gridModel, col, row) {
+    if (!gridModel || row < 0 || row >= gridModel.rows || col < 0 || col >= gridModel.cols) {
+      return null;
+    }
+    return gridModel.slots[row][col];
+  }
+
+  function getCellFromEvent(gridInfo, event) {
+    const rect = gridInfo.el.getBoundingClientRect();
+    const { cell, gap } = getCellSize(gridInfo.el);
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;
 
@@ -22,73 +151,66 @@
     }
 
     const step = cell + gap;
-    const x = localX + grid.scrollLeft;
-    const y = localY + grid.scrollTop;
+    const x = localX + gridInfo.el.scrollLeft;
+    const y = localY + gridInfo.el.scrollTop;
     const col = Math.floor(x / step);
     const row = Math.floor(y / step);
+    const slot = getSlot(gridInfo.model, col, row);
 
-    if (col < 0 || row < 0 || col >= cols || row >= rows) {
+    if (!slot || !slot.enabled) {
       return null;
     }
 
-    return { col, row };
+    return { col, row, slot };
   }
 
-  function buildOcc(items, cols, rows, ignoreId) {
-    const occ = Array.from({ length: rows }, () => Array(cols).fill(false));
+  function buildOccupiedCells(items, ignoreId) {
+    const occupied = new Set();
 
     items.forEach((item) => {
       if (ignoreId && item.id === ignoreId) {
         return;
       }
 
-      for (let row = item.y; row < item.y + item.h; row += 1) {
-        for (let col = item.x; col < item.x + item.w; col += 1) {
-          if (row >= 0 && row < rows && col >= 0 && col < cols) {
-            occ[row][col] = true;
-          }
-        }
-      }
+      getItemFootprint(item).forEach((cell) => {
+        occupied.add(makeCellKey(item.x + cell.x, item.y + cell.y));
+      });
     });
 
-    return occ;
+    return occupied;
   }
 
-  function canPlaceAt(occ, x, y, w, h, cols, rows) {
-    if (x < 0 || y < 0 || x + w > cols || y + h > rows) {
-      return false;
-    }
-
-    for (let row = y; row < y + h; row += 1) {
-      for (let col = x; col < x + w; col += 1) {
-        if (occ[row][col]) {
-          return false;
-        }
+  function canPlaceItem(gridModel, occupied, item, x, y) {
+    const footprint = getItemFootprint(item);
+    for (const cell of footprint) {
+      const targetX = x + cell.x;
+      const targetY = y + cell.y;
+      const slot = getSlot(gridModel, targetX, targetY);
+      if (!slot || !slot.enabled || occupied.has(makeCellKey(targetX, targetY))) {
+        return false;
       }
     }
 
     return true;
   }
 
-  function markPlace(occ, x, y, w, h) {
-    for (let row = y; row < y + h; row += 1) {
-      for (let col = x; col < x + w; col += 1) {
-        occ[row][col] = true;
-      }
-    }
+  function markOccupiedCells(occupied, item, x, y) {
+    getItemFootprint(item).forEach((cell) => {
+      occupied.add(makeCellKey(x + cell.x, y + cell.y));
+    });
   }
 
-  function autoPack(items, cols, rows) {
-    const occ = Array.from({ length: rows }, () => Array(cols).fill(false));
+  function autoPack(items, gridModel) {
+    const occupied = new Set();
     const placed = [];
 
     for (const item of items) {
       let placedItem = false;
 
-      for (let row = 0; row < rows && !placedItem; row += 1) {
-        for (let col = 0; col < cols && !placedItem; col += 1) {
-          if (canPlaceAt(occ, col, row, item.w, item.h, cols, rows)) {
-            markPlace(occ, col, row, item.w, item.h);
+      for (let row = 0; row < gridModel.rows && !placedItem; row += 1) {
+        for (let col = 0; col < gridModel.cols && !placedItem; col += 1) {
+          if (canPlaceItem(gridModel, occupied, item, col, row)) {
+            markOccupiedCells(occupied, item, col, row);
             placed.push({ ...item, x: col, y: row });
             placedItem = true;
           }
@@ -132,13 +254,18 @@
       h: definition.size.h,
       texture: definition.texture,
       category: definition.category,
-      tint: definition.tint || "transparent"
+      tint: definition.tint || "transparent",
+      footprint: normalizeFootprint(definition.footprint)
     };
   }
 
   const ITEM_INFO_INDEX_PATH = "./src/items/item_info/index.json";
   const ITEM_INFO_BASE_PATH = "./src/items/item_info";
   const ITEM_ICON_BASE_PATH = "./src/items/item_icons";
+  const SLOT_OUTER_COLOR = "#494b49";
+  const SLOT_INNER_COLOR = "#2f2f2e";
+  const SLOT_OUTER_WIDTH = "2px";
+  const SLOT_INNER_WIDTH = "2px";
   const itemRegistry = new ItemRegistry();
   let itemInstances = [];
 
@@ -243,30 +370,65 @@
   function getGridInfoById(id) {
     if (id === "container") {
       const size = parseSize(dom.containerSel.value);
-      return { id, el: dom.containerGrid, cols: size.cols, rows: size.rows, items: state.containerItems };
+      return {
+        id,
+        el: dom.containerGrid,
+        cols: size.cols,
+        rows: size.rows,
+        items: state.containerItems,
+        model: buildGridModel(id, size.cols, size.rows)
+      };
     }
 
     if (id === "pockets") {
       const el = document.getElementById("pocketsGrid");
-      return { id, el, cols: 4, rows: 1, items: state.pocketsItems };
+      return {
+        id,
+        el,
+        cols: 4,
+        rows: 1,
+        items: state.pocketsItems,
+        model: buildGridModel(id, 4, 1)
+      };
     }
 
     if (id === "rig") {
       const el = document.getElementById("rigGrid");
       const size = parseSize(dom.rigSel.value);
-      return { id, el, cols: size.cols, rows: size.rows, items: state.rigItems };
+      return {
+        id,
+        el,
+        cols: size.cols,
+        rows: size.rows,
+        items: state.rigItems,
+        model: buildGridModel(id, size.cols, size.rows)
+      };
     }
 
     if (id === "bag") {
       const el = document.getElementById("bagGrid");
       const size = parseSize(dom.bagSel.value);
-      return { id, el, cols: size.cols, rows: size.rows, items: state.bagItems };
+      return {
+        id,
+        el,
+        cols: size.cols,
+        rows: size.rows,
+        items: state.bagItems,
+        model: buildGridModel(id, size.cols, size.rows)
+      };
     }
 
     if (id === "secure") {
       const el = document.getElementById("secureGrid");
       const size = parseSize(dom.secureSel.value);
-      return { id, el, cols: size.cols, rows: size.rows, items: state.secureItems };
+      return {
+        id,
+        el,
+        cols: size.cols,
+        rows: size.rows,
+        items: state.secureItems,
+        model: buildGridModel(id, size.cols, size.rows)
+      };
     }
 
     return null;
@@ -324,7 +486,7 @@
 
   function supportsItemInGrid(gridInfo, itemData) {
     if (gridInfo.id === "pockets") {
-      return itemData.w === 1 && itemData.h === 1;
+      return itemData.w === 1 && itemData.h === 1 && getItemFootprint(itemData).length === 1;
     }
 
     return true;
@@ -345,7 +507,7 @@
       return { targetGrid, position: null, canDrop: false };
     }
 
-    const pointerCell = getCellFromEvent(targetGrid.el, targetGrid.cols, targetGrid.rows, pointerEvent);
+    const pointerCell = getCellFromEvent(targetGrid, pointerEvent);
     if (!pointerCell) {
       return { targetGrid: null, position: null, canDrop: false };
     }
@@ -357,48 +519,58 @@
       y: Math.max(0, Math.min(pointerCell.row - dragState.grabCellY, maxRow))
     };
 
-    const occupancy = buildOcc(
+    const occupied = buildOccupiedCells(
       targetGrid.items,
-      targetGrid.cols,
-      targetGrid.rows,
       dragState.sourceId === targetGrid.id ? itemData.id : null
     );
 
     return {
       targetGrid,
       position,
-      canDrop: canPlaceAt(
-        occupancy,
-        position.x,
-        position.y,
-        itemData.w,
-        itemData.h,
-        targetGrid.cols,
-        targetGrid.rows
-      )
+      canDrop: canPlaceItem(targetGrid.model, occupied, itemData, position.x, position.y)
     };
   }
 
-  function renderGrid(el, cols, rows, items, onItemClick, allowDrag = false) {
-    el.style.setProperty("--cols", cols);
-    el.style.setProperty("--rows", rows);
+  function applyCellBorders(cell, slot, gridModel) {
+    const right = getSlot(gridModel, slot.col + 1, slot.row);
+    const down = getSlot(gridModel, slot.col, slot.row + 1);
+    const left = getSlot(gridModel, slot.col - 1, slot.row);
+    const up = getSlot(gridModel, slot.col, slot.row - 1);
+    const topConnected = slot.links.up && up;
+    const leftConnected = slot.links.left && left;
+    const rightConnected = slot.links.right && right;
+    const bottomConnected = slot.links.down && down;
+
+    cell.style.borderTopColor = topConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
+    cell.style.borderLeftColor = leftConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
+    cell.style.borderRightColor = rightConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
+    cell.style.borderBottomColor = bottomConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
+    cell.style.borderTopWidth = topConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
+    cell.style.borderLeftWidth = leftConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
+    cell.style.borderRightWidth = rightConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
+    cell.style.borderBottomWidth = bottomConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
+  }
+
+  function renderGrid(gridInfo, onItemClick, allowDrag = false) {
+    const { el, model, items } = gridInfo;
+    el.style.setProperty("--cols", model.cols);
+    el.style.setProperty("--rows", model.rows);
     el.innerHTML = "";
 
     const hasPositions = items.length > 0 && items.every((item) => typeof item.x === "number" && typeof item.y === "number");
-    const placed = hasPositions ? items : autoPack(items, cols, rows);
-    const occ = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const placed = hasPositions ? items : autoPack(items, model);
+    const gridId = getGridIdByEl(el);
+    const sourcePlaceholder = state.dragState && state.dragState.sourceId === gridId
+      ? placed.find((entry) => entry.id === state.dragState.item.id) || null
+      : null;
+    const visibleItems = sourcePlaceholder
+      ? placed.filter((entry) => entry.id !== sourcePlaceholder.id)
+      : placed;
 
-    for (const item of placed) {
-      for (let row = item.y; row < item.y + item.h; row += 1) {
-        for (let col = item.x; col < item.x + item.w; col += 1) {
-          occ[row][col] = true;
-        }
-      }
-    }
-
-    for (let row = 0; row < rows; row += 1) {
-      for (let col = 0; col < cols; col += 1) {
-        if (occ[row][col]) {
+    for (let row = 0; row < model.rows; row += 1) {
+      for (let col = 0; col < model.cols; col += 1) {
+        const slot = getSlot(model, col, row);
+        if (!slot || !slot.enabled) {
           continue;
         }
 
@@ -406,11 +578,28 @@
         cell.className = "cell";
         cell.style.gridColumn = String(col + 1);
         cell.style.gridRow = String(row + 1);
+        applyCellBorders(cell, slot, model);
         el.appendChild(cell);
       }
     }
 
-    for (const itemData of placed) {
+
+    if (sourcePlaceholder) {
+      const placeholder = document.createElement("div");
+      placeholder.className = "item source-placeholder";
+      placeholder.style.gridColumn = `${sourcePlaceholder.x + 1} / span ${sourcePlaceholder.w}`;
+      placeholder.style.gridRow = `${sourcePlaceholder.y + 1} / span ${sourcePlaceholder.h}`;
+      const placeholderIconStyle = sourcePlaceholder.texture ? `style="background-image:url('${sourcePlaceholder.texture}')"` : "";
+      placeholder.innerHTML = `
+        <div class="icon" ${placeholderIconStyle}></div>
+        <div class="label">${sourcePlaceholder.name}</div>
+        <div class="meta"></div>
+      `;
+      placeholder.style.setProperty("--item-tint", "transparent");
+      el.appendChild(placeholder);
+    }
+
+    for (const itemData of visibleItems) {
       const item = document.createElement("div");
       item.className = "item";
       item.dataset.itemId = itemData.id;
@@ -423,7 +612,11 @@
         <div class="label">${itemData.name}</div>
         <div class="meta"></div>
       `;
-      item.style.setProperty("--item-tint", itemData.tint && itemData.tint !== "transparent" ? itemData.tint : "transparent");
+      if (itemData.tint && itemData.tint !== "transparent") {
+        item.style.setProperty("--item-tint", itemData.tint);
+      } else {
+        item.style.removeProperty("--item-tint");
+      }
 
       item.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -467,7 +660,7 @@
               grabCellY: Math.max(0, Math.min(itemData.h - 1, Math.floor(offsetY / sourceStep)))
             };
 
-            state.dragState.preview.className = "item";
+            state.dragState.preview.className = "item drop-preview";
             state.dragState.preview.style.opacity = "0.35";
             state.dragState.preview.style.pointerEvents = "none";
             state.dragState.preview.style.gridColumn = `${itemData.x + 1} / span ${itemData.w}`;
@@ -482,6 +675,7 @@
             state.dragState.ghost.style.top = `${moveEvent.clientY - offsetY}px`;
             document.body.appendChild(state.dragState.ghost);
             didStartDrag = true;
+            rerenderAll();
 
             try {
               pickUpAudio.currentTime = 0;
@@ -536,16 +730,7 @@
             }
 
             const dropTarget = getDropTarget(itemData, upEvent);
-            if (dropTarget.targetGrid && dropTarget.position && dropTarget.canDrop) {
-              moveItemBetweenGrids(
-                state.dragState.sourceId,
-                dropTarget.targetGrid.id,
-                itemData.id,
-                dropTarget.position.x,
-                dropTarget.position.y
-              );
-            }
-
+            const sourceId = state.dragState.sourceId;
             clearPreview();
             item.classList.remove("dragging");
             if (state.dragState.ghost) {
@@ -557,6 +742,19 @@
             }
 
             state.dragState = null;
+
+            if (dropTarget.targetGrid && dropTarget.position && dropTarget.canDrop) {
+              moveItemBetweenGrids(
+                sourceId,
+                dropTarget.targetGrid.id,
+                itemData.id,
+                dropTarget.position.x,
+                dropTarget.position.y
+              );
+            } else if (didStartDrag) {
+              rerenderAll();
+            }
+
             try {
               putDownAudio.currentTime = 0;
               putDownAudio.play();
@@ -571,7 +769,7 @@
       el.appendChild(item);
     }
 
-    el.addEventListener("click", () => clearActiveItems(el), { once: false });
+    el.onclick = () => clearActiveItems(el);
   }
 
   function buildSection(titleText, rightNode, gridId) {
@@ -653,7 +851,7 @@
   function ensureContainerItems(cols, rows) {
     const sizeKey = `${cols}x${rows}`;
     if (state.containerItems.length === 0 || state.containerSizeKey !== sizeKey) {
-      const placed = autoPack(itemInstances, cols, rows);
+      const placed = autoPack(itemInstances, buildGridModel("container", cols, rows));
       state.containerItems = placed.map((item) => ({ ...item }));
       state.containerSizeKey = sizeKey;
     }
@@ -683,19 +881,10 @@
   function renderInventoryGrids() {
     ensureInventoryItems();
 
-    const pocketsGrid = document.getElementById("pocketsGrid");
-    const rigGrid = document.getElementById("rigGrid");
-    const bagGrid = document.getElementById("bagGrid");
-    const secureGrid = document.getElementById("secureGrid");
-
-    const rigSize = parseSize(dom.rigSel.value);
-    const bagSize = parseSize(dom.bagSel.value);
-    const secureSize = parseSize(dom.secureSel.value);
-
-    renderGrid(pocketsGrid, 4, 1, state.pocketsItems, () => {}, true);
-    renderGrid(rigGrid, rigSize.cols, rigSize.rows, state.rigItems, () => {}, true);
-    renderGrid(bagGrid, bagSize.cols, bagSize.rows, state.bagItems, () => {}, true);
-    renderGrid(secureGrid, secureSize.cols, secureSize.rows, state.secureItems, () => {}, true);
+    renderGrid(getGridInfoById("pockets"), () => {}, true);
+    renderGrid(getGridInfoById("rig"), () => {}, true);
+    renderGrid(getGridInfoById("bag"), () => {}, true);
+    renderGrid(getGridInfoById("secure"), () => {}, true);
 
     dom.invDetail.innerHTML = "左侧默认无物品（全空）。只有右侧搜索容器有物品。";
   }
@@ -703,9 +892,9 @@
   function renderContainer() {
     const size = parseSize(dom.containerSel.value);
     dom.containerTitle.textContent = `防寒大衣（容器 ${size.cols}×${size.rows}）`;
-    const items = ensureContainerItems(size.cols, size.rows);
+    ensureContainerItems(size.cols, size.rows);
 
-    renderGrid(dom.containerGrid, size.cols, size.rows, items, (item) => {
+    renderGrid(getGridInfoById("container"), (item) => {
       dom.containerDetail.innerHTML = `容器物品：<b>${item.name}</b>（${item.w}×${item.h}）<br/>${item.desc}`;
     }, true);
   }
@@ -732,7 +921,6 @@
   [dom.rigSel, dom.bagSel, dom.secureSel].forEach((select) => {
     select.addEventListener("change", renderInventoryGrids);
   });
-
   dom.containerSel.addEventListener("change", renderContainer);
 
   initialize().catch((error) => {
@@ -740,3 +928,4 @@
     console.error(error);
   });
 })();
+

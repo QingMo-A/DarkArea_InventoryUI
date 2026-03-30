@@ -1,6 +1,6 @@
 :root{
   --bg1:#141a20;
-  --bg2:#07090b;
+  --bg2:#0c0c0c;
   --panel: rgba(0,0,0,.28);
   --line: rgba(255,255,255,.12);
   --text: rgba(255,255,255,.85);
@@ -19,7 +19,7 @@ body{
   height:100vh;
   overflow:hidden;
   font-family:"Microsoft YaHei", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
-  background:#000;
+  background:#0c0c0c;
   color:var(--text);
 }
 
@@ -179,7 +179,7 @@ select{
   grid-template-rows: repeat(var(--rows), var(--cell));
   gap: var(--gap);
   background: rgba(0,0,0,.14);
-  border: 1px solid rgba(255,255,255,.10);
+  border: 0;
   width: fit-content;
   max-width: 100%;
   overflow:auto;
@@ -193,34 +193,42 @@ select{
 }
 
 .grid.pockets-grid .cell{
-  border: 2px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.24);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  background: #0c0c0c;
+  box-shadow: none;
 }
 .cell{
   width: var(--cell);
   height: var(--cell);
-  border-right:2px solid rgba(255,255,255,.10);
-  border-bottom:2px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
+  border:2px solid transparent;
+  background: #0c0c0c;
   z-index: 1;
 }
 
 .item{
+  --item-fill: var(--item-tint, #0c0c0c);
   position:relative;
   z-index: 2;
-  border:1px solid rgba(216,195,138,.35);
-  background: var(--item-tint, transparent);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  border:0;
+  background: transparent;
+  box-shadow: none;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
+  box-sizing: border-box;
   padding:6px 6px 4px 6px;
   color: rgba(255,255,255,.92);
   font-weight:800;
   user-select:none;
   cursor:pointer;
   overflow:hidden;
+}
+
+.item::before{
+  content:"";
+  position:absolute;
+  inset:2px;
+  background: var(--item-fill);
+  pointer-events:none;
 }
 
 .item .icon{
@@ -231,11 +239,12 @@ select{
   background-size:cover;
   opacity:1;
   pointer-events:none;
+  z-index:1;
 }
 
 .item.active{
-  border-color: var(--accent);
-  box-shadow: 0 0 18px rgba(216,195,138,.22);
+  border-color: #494b49;
+  box-shadow: 0 0 18px rgba(73,75,73,.24);
 }
 
 .item.invalid{
@@ -244,10 +253,31 @@ select{
   filter: saturate(0.6);
 }
 
+.item.drop-preview{
+  --item-fill: rgba(34,64,36,.82);
+  opacity: 0.58;
+  border-color: #4a5d4b;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+.item.drop-preview.invalid{
+  --item-fill: rgba(62,18,21,.82);
+  border-color: #6a4447;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
 .item.dragging{
   opacity: 0.35;
   filter: saturate(0.7);
   --item-tint: transparent;
+  --item-fill: transparent;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .item.dragging .label,
@@ -260,7 +290,40 @@ select{
   pointer-events: none;
   opacity: 0.9;
   z-index: 9999;
-  box-shadow: 0 10px 24px rgba(0,0,0,.45);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  --item-tint: transparent;
+  --item-fill: transparent;
+}
+
+.drag-ghost .label,
+.drag-ghost .meta{
+  display:none;
+}
+
+.drag-ghost .icon{
+  inset:5%;
+}
+
+.source-placeholder{
+  pointer-events:none;
+  opacity: 0.35;
+  filter: saturate(0.7);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  --item-tint: transparent;
+  --item-fill: transparent;
+}
+
+.source-placeholder .label,
+.source-placeholder .meta{
+  display:none;
+}
+
+.source-placeholder .icon{
+  inset:5%;
 }
 
 .item .label{
@@ -269,11 +332,20 @@ select{
   left:2px;
   font-size:12px;
   font-weight:700;
-  text-shadow: 0 1px 0 rgba(0,0,0,.6);
+  color:#fff;
+  text-shadow:
+    -1px 0 0 #000,
+    1px 0 0 #000,
+    0 -1px 0 #000,
+    0 1px 0 #000,
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
   opacity:.95;
-  padding:1px 2px;
-  background: rgba(0,0,0,.35);
-  border-radius: 4px;
+  padding:0;
+  background: transparent;
+  border-radius: 0;
   z-index:1;
 }
 
@@ -300,7 +372,7 @@ select{
 
 .secure-box{
   padding: 10px;
-  border: 1px solid rgba(255,255,255,.10);
+  border: 0;
   background: rgba(0,0,0,.16);
 }
 
@@ -330,5 +402,25 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

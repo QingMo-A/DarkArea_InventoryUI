@@ -16,3 +16,38 @@ Original prompt: 看看这个项目都写了什么
 - Runtime note: external item loading now requires serving the project over HTTP. Added scripts/serve.ps1 to start a local static server with Python.
 - 2026-03-28 slot border tweak: increased empty slot borders to 2px for both regular grid cells and pockets slots.
 - 2026-03-28 repo init: renamed default branch to main and prepared initial backup commit with a minimal .gitignore for temporary local artifacts.
+- 2026-03-28 grid border consistency: increased the outer border of regular connected grids to 2px so top/left edges match the thickened right/bottom cell borders.
+- 2026-03-28 grid palette: set outer slot borders to #494b49 and internal connected grid lines to #2f2f2e.
+- 2026-03-28 grid edge cleanup: removed the internal right/bottom lines on the last column and last row cells so connected grids do not show a duplicate line next to the outer border.
+- 2026-03-28 drag visuals: dragging items and drag ghost now hide border, background, shadow, and labels so only the item icon remains visible during drag.
+- 2026-03-28 pocket slot fix: restricted the last-column/last-row border suppression to connected grids only, so independent pockets slots keep their full right and bottom borders.
+- 2026-03-28 drag source rendering: source grid now temporarily hides the dragged item during drag so the origin cells render as real empty slots instead of a transparent item shell.
+- 2026-03-28 drag source placeholder: source grids now render a dedicated translucent icon-only placeholder for the dragged item while leaving the underlying slot borders visible.
+- 2026-03-28 drop preview colors: valid placement preview now uses a semi-transparent green fill (#101e11), invalid placement preview uses a semi-transparent red fill (#220709).
+- 2026-03-28 drop preview border colors: valid preview border changed to #433535 and invalid preview border changed to #4f3637.
+- 2026-03-28 drop preview darkening: darkened valid preview to border #2f2626 with rgba(10,20,11,.78) fill, and invalid preview to border #3a2628 with rgba(22,5,6,.78) fill.
+- 2026-03-28 slot fill color: changed both regular grid cells and pockets slots backgrounds to #0c0c0c.
+- 2026-03-28 source placeholder icon sizing: restored source-placeholder icon inset to 5 percent so the dragged-from placeholder no longer appears enlarged.
+- 2026-03-28 drag icon scale fix: restored both drag-ghost and source-placeholder icon inset to 5 percent so they match normal in-slot item proportions.
+- 2026-03-28 item label style: removed label background plate and switched to white text with a full black outline via multi-direction text-shadow.
+- 2026-03-30 item border and preview color update: removed gold item outline by making the base border transparent and changing active state to neutral gray, and brightened valid/invalid drop preview green-red colors.
+- 2026-03-30 item frame removal: removed the base transparent border and inset shadow from items so they no longer consume visible slot edge space.
+- 2026-03-30 item slot inset: added a 2px margin to items so the surrounding slot border remains visible while occupied internal grid lines stay covered.
+
+- 2026-03-30 slot-edge visibility fix: implemented the item inset in CSS with margin and border-box sizing so occupied items sit inside slot borders without revealing internal grid lines through the item body.
+
+- 2026-03-30 occupied cell frame fix: renderGrid now keeps the full slot lattice under items, and normal items use an opaque slot-colored fill so outer slot borders stay visible without internal grid lines bleeding through.
+
+- 2026-03-30 item fill layer: replaced the global item margin with an inset background layer on .item::before so item fill covers occupied cells while preserving only the outer slot border around the item footprint.
+
+- 2026-03-30 slot model refactor: rewrote app.js grid handling around a slot-grid model with per-cell enabled state and per-edge connectivity, so containers are no longer inferred from CSS border tricks.
+
+- 2026-03-30 footprint-aware placement: occupancy, drop validation, and auto-pack now operate on item footprints against the slot model, with hooks for future non-rectangular items via a footprint field in .ii files.
+
+- 2026-03-30 cell edge rendering: switched cell borders to per-side gradient layers so connected cells still render all four edges visibly while using different inner/outer colors and widths.
+
+- 2026-03-30 drag fill fix: dragging items, ghosts, and source placeholders now force the item fill layer transparent so only the icon remains visible during drag.
+
+- 2026-03-30 border thickness alignment: restored SLOT_INNER_WIDTH to 2px so each connected cell keeps a full-width border and shared edges read visually thicker through overlap, matching the intended look.
+
+- 2026-03-30 border junction cleanup: kept outer edges on real borders but moved connected inner edges to inset background lines so shared lines no longer clip the outer border corners.

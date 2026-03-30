@@ -1,0 +1,1 @@
+node .\scripts\serve.js 8080 .\
