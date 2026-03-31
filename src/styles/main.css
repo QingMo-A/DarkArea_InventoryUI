@@ -205,10 +205,12 @@ select{
 }
 
 .item{
-  --item-fill: var(--item-tint, #0c0c0c);
+  --item-mask-fill: transparent;
+  --item-fill: var(--item-tint, rgba(255,255,255,.06));
+  --item-fill-opacity: 1;
   position:relative;
   z-index: 2;
-  border:0;
+  border:1px solid #434444;
   background: transparent;
   box-shadow: none;
   display:flex;
@@ -223,12 +225,23 @@ select{
   overflow:hidden;
 }
 
-.item::before{
+.item::before,
+.item::after{
   content:"";
   position:absolute;
   inset:2px;
-  background: var(--item-fill);
   pointer-events:none;
+}
+
+.item::before{
+  z-index:0;
+  background: var(--item-mask-fill);
+}
+
+.item::after{
+  z-index:1;
+  background: var(--item-fill);
+  opacity: var(--item-fill-opacity);
 }
 
 .item .icon{
@@ -239,7 +252,32 @@ select{
   background-size:cover;
   opacity:1;
   pointer-events:none;
-  z-index:1;
+  z-index:2;
+}
+
+.item .internal-lines{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+}
+
+.item .internal-line{
+  position:absolute;
+  background:#2f2f2e;
+  opacity:.78;
+}
+
+.item .internal-line.vertical{
+  top:1px;
+  bottom:1px;
+  width:2px;
+}
+
+.item .internal-line.horizontal{
+  left:1px;
+  right:1px;
+  height:2px;
 }
 
 .item.active{
@@ -254,7 +292,9 @@ select{
 }
 
 .item.drop-preview{
+  --item-mask-fill: rgba(34,64,36,.82);
   --item-fill: rgba(34,64,36,.82);
+  --item-fill-opacity: 1;
   opacity: 0.58;
   border-color: #4a5d4b;
   background: transparent;
@@ -263,6 +303,7 @@ select{
 }
 
 .item.drop-preview.invalid{
+  --item-mask-fill: rgba(62,18,21,.82);
   --item-fill: rgba(62,18,21,.82);
   border-color: #6a4447;
   background: transparent;
@@ -273,6 +314,7 @@ select{
 .item.dragging{
   opacity: 0.35;
   filter: saturate(0.7);
+  --item-mask-fill: transparent;
   --item-tint: transparent;
   --item-fill: transparent;
   border-color: transparent;
@@ -280,6 +322,7 @@ select{
   box-shadow: none;
 }
 
+.item.dragging .internal-lines,
 .item.dragging .label,
 .item.dragging .meta{
   display:none;
@@ -293,10 +336,12 @@ select{
   border-color: transparent;
   background: transparent;
   box-shadow: none;
+  --item-mask-fill: transparent;
   --item-tint: transparent;
   --item-fill: transparent;
 }
 
+.drag-ghost .internal-lines,
 .drag-ghost .label,
 .drag-ghost .meta{
   display:none;
@@ -313,10 +358,12 @@ select{
   border-color: transparent;
   background: transparent;
   box-shadow: none;
+  --item-mask-fill: transparent;
   --item-tint: transparent;
   --item-fill: transparent;
 }
 
+.source-placeholder .internal-lines,
 .source-placeholder .label,
 .source-placeholder .meta{
   display:none;
@@ -346,7 +393,7 @@ select{
   padding:0;
   background: transparent;
   border-radius: 0;
-  z-index:1;
+  z-index:3;
 }
 
 .item .meta{
@@ -358,7 +405,7 @@ select{
   gap:8px;
   white-space:nowrap;
   position:relative;
-  z-index:1;
+  z-index:3;
 }
 
 .item .meta span{
@@ -402,6 +449,13 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
+
+
+
+
+
+
 
 
 

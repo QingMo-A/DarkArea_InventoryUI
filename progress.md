@@ -51,3 +51,15 @@ Original prompt: 看看这个项目都写了什么
 - 2026-03-30 border thickness alignment: restored SLOT_INNER_WIDTH to 2px so each connected cell keeps a full-width border and shared edges read visually thicker through overlap, matching the intended look.
 
 - 2026-03-30 border junction cleanup: kept outer edges on real borders but moved connected inner edges to inset background lines so shared lines no longer clip the outer border corners.
+
+- 2026-03-30 item fill transparency: added a dedicated fill opacity variable so normal item backgrounds are slightly transparent while drag previews keep full-strength fill.
+
+- 2026-03-30 occupied-border masking: split normal item background into an opaque mask layer plus a subtle overlay so internal occupied-cell borders stay hidden while items keep a slightly translucent surface.
+
+- 2026-03-30 occupied-border masking: normal items now use an opaque mask layer plus a subtle overlay, preventing occupied internal slot borders from bleeding through while keeping a slightly softer surface.
+\n- 2026-03-30 drag rotation behavior: repaired app.js after duplicate-function and string corruption, and kept `R` rotation gated to active drag state only; selected-but-stationary items no longer respond to `R`.
+- 2026-03-30 validation: `node --check src/js/app.js` passes after the drag-rotation repair.
+- 2026-03-30 validation gap: browser automation still not run because Playwright is not available locally in this workspace.
+\n- 2026-03-31 drag rotation preview fix: removed the stray rerenderAll() inside rotateDraggedItem(); drag rotation now updates only the current drag visuals so left inventory grids keep their drop preview visible immediately after pressing R.
+\n- 2026-03-31 drop refresh fix: restored rerenderAll() in moveItemBetweenGrids() after successful cross-grid drops; placement now redraws immediately again while drag rotation still avoids full rerenders.
+\n- 2026-03-31 drag center snap: changed drag start to snap the dragged item center under the pointer and switched drag rotation to recompute a centered anchor so the ghost stays pointer-centered after pressing R.

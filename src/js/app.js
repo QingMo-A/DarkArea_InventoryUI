@@ -33,9 +33,18 @@
       .filter((cell) => cell && Number.isInteger(cell.x) && Number.isInteger(cell.y));
   }
 
+  function rotateFootprint(baseFootprint, baseWidth, baseHeight) {
+    return baseFootprint.map((cell) => ({
+      x: baseHeight - 1 - cell.y,
+      y: cell.x
+    }));
+  }
+
   function getItemFootprint(item) {
-    if (Array.isArray(item.footprint) && item.footprint.length) {
-      return item.footprint;
+    if (Array.isArray(item.baseFootprint) && item.baseFootprint.length) {
+      return item.rotated
+        ? rotateFootprint(item.baseFootprint, item.baseW, item.baseH)
+        : item.baseFootprint;
     }
 
     const cells = [];
@@ -245,17 +254,21 @@
   }
 
   function toItemInstance(definition) {
+    const baseFootprint = normalizeFootprint(definition.footprint);
     return {
       id: definition.internalId,
       name: definition.name,
       label: definition.displayId,
       desc: definition.desc,
+      baseW: definition.size.w,
+      baseH: definition.size.h,
       w: definition.size.w,
       h: definition.size.h,
+      rotated: false,
       texture: definition.texture,
       category: definition.category,
       tint: definition.tint || "transparent",
-      footprint: normalizeFootprint(definition.footprint)
+      baseFootprint
     };
   }
 
@@ -275,6 +288,8 @@
     dragState: null,
     suppressClickId: null,
     isSecurePinned: false,
+    activeItemGridId: "",
+    activeItemId: "",
     pocketsItems: [],
     rigItems: [],
     bagItems: [],
@@ -314,8 +329,8 @@
 
   function setLoadError(error) {
     const stack = error && error.stack ? error.stack : String(error);
-    const content = `<b>物品加载失败：</b><pre style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(stack)}</pre>`;
-    dom.invDetail.innerHTML = content;
+    const content = `<b>\u7269\u54c1\u52a0\u8f7d\u5931\u8d25\uff1a</b><pre style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(stack)}</pre>`;
+    dom.invDetail.innerHTML = "\u5de6\u4fa7\u9ed8\u8ba4\u65e0\u7269\u54c1\uff08\u5168\u7a7a\uff09\u3002\u53ea\u6709\u53f3\u4fa7\u641c\u7d22\u5bb9\u5668\u6709\u7269\u54c1\u3002";
     dom.containerDetail.innerHTML = content;
   }
 
@@ -349,6 +364,155 @@
 
   function clearActiveItems(root) {
     root.querySelectorAll(".item.active").forEach((item) => item.classList.remove("active"));
+  }
+
+  function clearSelectedItem() {
+    state.activeItemGridId = "";
+    state.activeItemId = "";
+  }
+
+  function isItemRotatable(item) {
+    return item.baseW !== item.baseH;
+  }
+
+  function getRotatedSize(item, rotated) {
+    return rotated
+      ? { w: item.baseH, h: item.baseW }
+      : { w: item.baseW, h: item.baseH };
+  }
+
+  function getItemPixelSize(item, step, gap) {
+    return {
+      width: item.w * step - gap,
+      height: item.h * step - gap
+    };
+  }
+
+  function getCenteredDragAnchor(item, step, gap) {
+    const size = getItemPixelSize(item, step, gap);
+    return {
+      offsetX: size.width / 2,
+      offsetY: size.height / 2,
+      grabCellX: Math.max(0, Math.min(item.w - 1, Math.floor(item.w / 2))),
+      grabCellY: Math.max(0, Math.min(item.h - 1, Math.floor(item.h / 2)))
+    };
+  }
+
+  function layoutItemIcon(element, rotated) {
+    const icon = element.querySelector(".icon");
+    if (!icon) {
+      return;
+    }
+
+    const width = element.clientWidth;
+    const height = element.clientHeight;
+    if (!width || !height) {
+      return;
+    }
+
+    const insetX = width * 0.05;
+    const insetY = height * 0.05;
+
+    if (rotated) {
+      const boxWidth = Math.max(0, height - insetY * 2);
+      const boxHeight = Math.max(0, width - insetX * 2);
+      icon.style.left = `${(width - boxWidth) / 2}px`;
+      icon.style.top = `${(height - boxHeight) / 2}px`;
+      icon.style.width = `${boxWidth}px`;
+      icon.style.height = `${boxHeight}px`;
+      icon.style.transform = "rotate(90deg)";
+      icon.style.backgroundSize = "cover";
+      return;
+    }
+
+    icon.style.left = `${insetX}px`;
+    icon.style.top = `${insetY}px`;
+    icon.style.width = `${Math.max(0, width - insetX * 2)}px`;
+    icon.style.height = `${Math.max(0, height - insetY * 2)}px`;
+    icon.style.transform = "none";
+    icon.style.backgroundSize = "cover";
+  }
+  function renderItemInternalLines(element, item, gridElement) {
+    const existing = element.querySelector(".internal-lines");
+    if (existing) {
+      existing.remove();
+    }
+
+    if (!item || (item.w <= 1 && item.h <= 1)) {
+      return;
+    }
+
+    const { cell, gap } = getCellSize(gridElement);
+    const step = cell + gap;
+    const overlay = document.createElement("div");
+    overlay.className = "internal-lines";
+
+    for (let col = 1; col < item.w; col += 1) {
+      const line = document.createElement("div");
+      line.className = "internal-line vertical";
+      line.style.left = `${col * step - 1}px`;
+      overlay.appendChild(line);
+    }
+
+    for (let row = 1; row < item.h; row += 1) {
+      const line = document.createElement("div");
+      line.className = "internal-line horizontal";
+      line.style.top = `${row * step - 1}px`;
+      overlay.appendChild(line);
+    }
+
+    element.appendChild(overlay);
+  }
+
+  function getSelectedItemContext() {
+    if (!state.activeItemGridId || !state.activeItemId) {
+      return null;
+    }
+
+    const gridInfo = getGridInfoById(state.activeItemGridId);
+    if (!gridInfo) {
+      clearSelectedItem();
+      return null;
+    }
+
+    const item = gridInfo.items.find((entry) => entry.id === state.activeItemId);
+    if (!item) {
+      clearSelectedItem();
+      return null;
+    }
+
+    return { gridInfo, item };
+  }
+
+  function rotateDraggedItem() {
+    const dragState = state.dragState;
+    if (!dragState) {
+      return false;
+    }
+
+    const item = dragState.item;
+    if (!isItemRotatable(item)) {
+      return false;
+    }
+
+    const rotated = !item.rotated;
+    const size = getRotatedSize(item, rotated);
+
+    item.rotated = rotated;
+    item.w = size.w;
+    item.h = size.h;
+
+    const centeredAnchor = getCenteredDragAnchor(item, dragState.step, dragState.gap);
+    dragState.offsetX = centeredAnchor.offsetX;
+    dragState.offsetY = centeredAnchor.offsetY;
+    dragState.grabCellX = centeredAnchor.grabCellX;
+    dragState.grabCellY = centeredAnchor.grabCellY;
+
+    if (typeof dragState.lastClientX === "number" && typeof dragState.lastClientY === "number") {
+      syncDragStateVisuals({ clientX: dragState.lastClientX, clientY: dragState.lastClientY });
+    }
+
+    return true;
   }
 
   function getGridIdByEl(el) {
@@ -463,6 +627,9 @@
 
       item.x = x;
       item.y = y;
+      if (state.activeItemId === itemId) {
+        state.activeItemGridId = sourceId;
+      }
       rerenderAll();
       return;
     }
@@ -481,6 +648,9 @@
     const moved = { ...source.items[index], x, y };
     source.items.splice(index, 1);
     target.items.push(moved);
+    if (state.activeItemId === itemId) {
+      state.activeItemGridId = targetId;
+    }
     rerenderAll();
   }
 
@@ -531,6 +701,49 @@
     };
   }
 
+  function clearDragPreview() {
+    if (state.dragState && state.dragState.preview && state.dragState.preview.parentElement) {
+      state.dragState.preview.remove();
+      state.dragState.previewGridId = null;
+    }
+  }
+
+  function syncDragStateVisuals(pointerEvent) {
+    const dragState = state.dragState;
+    if (!dragState) {
+      return;
+    }
+
+    dragState.lastClientX = pointerEvent.clientX;
+    dragState.lastClientY = pointerEvent.clientY;
+
+    if (dragState.ghost) {
+      const ghostSize = getItemPixelSize(dragState.item, dragState.step, dragState.gap);
+      dragState.ghost.classList.toggle("rotated", !!dragState.item.rotated);
+      dragState.ghost.style.width = `${ghostSize.width}px`;
+      dragState.ghost.style.height = `${ghostSize.height}px`;
+      dragState.ghost.style.left = `${pointerEvent.clientX - dragState.offsetX}px`;
+      dragState.ghost.style.top = `${pointerEvent.clientY - dragState.offsetY}px`;
+      layoutItemIcon(dragState.ghost, !!dragState.item.rotated);
+    }
+
+    const dropTarget = getDropTarget(dragState.item, pointerEvent);
+    if (!dropTarget.targetGrid || !dropTarget.position) {
+      clearDragPreview();
+      return;
+    }
+
+    dragState.preview.classList.toggle("rotated", !!dragState.item.rotated);
+    if (!dragState.preview.parentElement || dragState.previewGridId !== dropTarget.targetGrid.id) {
+      dropTarget.targetGrid.el.appendChild(dragState.preview);
+      dragState.previewGridId = dropTarget.targetGrid.id;
+    }
+
+    dragState.preview.style.gridColumn = `${dropTarget.position.x + 1} / span ${dragState.item.w}`;
+    dragState.preview.style.gridRow = `${dropTarget.position.y + 1} / span ${dragState.item.h}`;
+    dragState.preview.classList.toggle("invalid", !dropTarget.canDrop);
+  }
+
   function applyCellBorders(cell, slot, gridModel) {
     const right = getSlot(gridModel, slot.col + 1, slot.row);
     const down = getSlot(gridModel, slot.col, slot.row + 1);
@@ -561,7 +774,7 @@
     const placed = hasPositions ? items : autoPack(items, model);
     const gridId = getGridIdByEl(el);
     const sourcePlaceholder = state.dragState && state.dragState.sourceId === gridId
-      ? placed.find((entry) => entry.id === state.dragState.item.id) || null
+      ? state.dragState.sourcePlaceholder || null
       : null;
     const visibleItems = sourcePlaceholder
       ? placed.filter((entry) => entry.id !== sourcePlaceholder.id)
@@ -586,7 +799,7 @@
 
     if (sourcePlaceholder) {
       const placeholder = document.createElement("div");
-      placeholder.className = "item source-placeholder";
+      placeholder.className = `item source-placeholder${sourcePlaceholder.rotated ? " rotated" : ""}`;
       placeholder.style.gridColumn = `${sourcePlaceholder.x + 1} / span ${sourcePlaceholder.w}`;
       placeholder.style.gridRow = `${sourcePlaceholder.y + 1} / span ${sourcePlaceholder.h}`;
       const placeholderIconStyle = sourcePlaceholder.texture ? `style="background-image:url('${sourcePlaceholder.texture}')"` : "";
@@ -597,11 +810,12 @@
       `;
       placeholder.style.setProperty("--item-tint", "transparent");
       el.appendChild(placeholder);
+      layoutItemIcon(placeholder, !!sourcePlaceholder.rotated);
     }
 
     for (const itemData of visibleItems) {
       const item = document.createElement("div");
-      item.className = "item";
+      item.className = `item${itemData.rotated ? " rotated" : ""}${state.activeItemGridId === gridId && state.activeItemId === itemData.id ? " active" : ""}`;
       item.dataset.itemId = itemData.id;
       item.style.gridColumn = `${itemData.x + 1} / span ${itemData.w}`;
       item.style.gridRow = `${itemData.y + 1} / span ${itemData.h}`;
@@ -625,8 +839,10 @@
           return;
         }
 
-        clearActiveItems(el);
+        clearActiveItems(document);
         item.classList.add("active");
+        state.activeItemGridId = gridId;
+        state.activeItemId = itemData.id;
         onItemClick(itemData);
       });
 
@@ -647,20 +863,26 @@
           let didStartDrag = false;
 
           const beginDrag = (moveEvent) => {
+            const centeredAnchor = getCenteredDragAnchor(itemData, sourceStep, sourceMetrics.gap);
             state.dragState = {
               item: itemData,
               grid: el,
               preview: document.createElement("div"),
               ghost: item.cloneNode(true),
+              sourcePlaceholder: { ...itemData },
               sourceId: getGridIdByEl(el),
               previewGridId: null,
-              offsetX,
-              offsetY,
-              grabCellX: Math.max(0, Math.min(itemData.w - 1, Math.floor(offsetX / sourceStep))),
-              grabCellY: Math.max(0, Math.min(itemData.h - 1, Math.floor(offsetY / sourceStep)))
+              offsetX: centeredAnchor.offsetX,
+              offsetY: centeredAnchor.offsetY,
+              step: sourceStep,
+              gap: sourceMetrics.gap,
+              lastClientX: moveEvent.clientX,
+              lastClientY: moveEvent.clientY,
+              grabCellX: centeredAnchor.grabCellX,
+              grabCellY: centeredAnchor.grabCellY
             };
-
             state.dragState.preview.className = "item drop-preview";
+            state.dragState.preview.classList.toggle("rotated", !!itemData.rotated);
             state.dragState.preview.style.opacity = "0.35";
             state.dragState.preview.style.pointerEvents = "none";
             state.dragState.preview.style.gridColumn = `${itemData.x + 1} / span ${itemData.w}`;
@@ -671,9 +893,10 @@
             state.dragState.ghost.classList.add("drag-ghost");
             state.dragState.ghost.style.width = `${item.offsetWidth}px`;
             state.dragState.ghost.style.height = `${item.offsetHeight}px`;
-            state.dragState.ghost.style.left = `${moveEvent.clientX - offsetX}px`;
-            state.dragState.ghost.style.top = `${moveEvent.clientY - offsetY}px`;
+            state.dragState.ghost.style.left = `${moveEvent.clientX - centeredAnchor.offsetX}px`;
+            state.dragState.ghost.style.top = `${moveEvent.clientY - centeredAnchor.offsetY}px`;
             document.body.appendChild(state.dragState.ghost);
+            layoutItemIcon(state.dragState.ghost, !!itemData.rotated);
             didStartDrag = true;
             rerenderAll();
 
@@ -683,12 +906,6 @@
             } catch (error) {}
           };
 
-          const clearPreview = () => {
-            if (state.dragState && state.dragState.preview && state.dragState.preview.parentElement) {
-              state.dragState.preview.remove();
-              state.dragState.previewGridId = null;
-            }
-          };
 
           const onMove = (moveEvent) => {
             if (!state.dragState) {
@@ -700,25 +917,7 @@
               beginDrag(moveEvent);
             }
 
-            if (state.dragState.ghost) {
-              state.dragState.ghost.style.left = `${moveEvent.clientX - state.dragState.offsetX}px`;
-              state.dragState.ghost.style.top = `${moveEvent.clientY - state.dragState.offsetY}px`;
-            }
-
-            const dropTarget = getDropTarget(itemData, moveEvent);
-            if (!dropTarget.targetGrid || !dropTarget.position) {
-              clearPreview();
-              return;
-            }
-
-            if (!state.dragState.preview.parentElement || state.dragState.previewGridId !== dropTarget.targetGrid.id) {
-              dropTarget.targetGrid.el.appendChild(state.dragState.preview);
-              state.dragState.previewGridId = dropTarget.targetGrid.id;
-            }
-
-            state.dragState.preview.style.gridColumn = `${dropTarget.position.x + 1} / span ${itemData.w}`;
-            state.dragState.preview.style.gridRow = `${dropTarget.position.y + 1} / span ${itemData.h}`;
-            state.dragState.preview.classList.toggle("invalid", !dropTarget.canDrop);
+            syncDragStateVisuals(moveEvent);
           };
 
           const onUp = (upEvent) => {
@@ -731,7 +930,7 @@
 
             const dropTarget = getDropTarget(itemData, upEvent);
             const sourceId = state.dragState.sourceId;
-            clearPreview();
+            clearDragPreview();
             item.classList.remove("dragging");
             if (state.dragState.ghost) {
               state.dragState.ghost.remove();
@@ -767,9 +966,14 @@
       }
 
       el.appendChild(item);
+      layoutItemIcon(item, !!itemData.rotated);
+      renderItemInternalLines(item, itemData, el);
     }
 
-    el.onclick = () => clearActiveItems(el);
+    el.onclick = () => {
+      clearActiveItems(document);
+      clearSelectedItem();
+    };
   }
 
   function buildSection(titleText, rightNode, gridId) {
@@ -801,8 +1005,10 @@
   function buildPinButton() {
     const button = document.createElement("div");
     button.className = `pin-btn${state.isSecurePinned ? " pinned" : ""}`;
-    button.title = state.isSecurePinned ? "取消固定" : "固定到独立 VBox2";
-    button.textContent = "📌";
+    button.title = state.isSecurePinned
+      ? "\u53d6\u6d88\u56fe\u9489\u62c6\u5206"
+      : "\u56fe\u9489\u5230\u53f3\u4fa7\u680f";
+    button.textContent = "\u56fe\u9489";
     button.addEventListener("click", () => {
       state.isSecurePinned = !state.isSecurePinned;
       renderInventoryLayout();
@@ -814,10 +1020,10 @@
   function renderInventoryLayout() {
     dom.invLayout.innerHTML = "";
 
-    const pocketsSection = buildSection("口袋（固定）", null, "pocketsGrid");
-    const rigSection = buildSection("弹挂", null, "rigGrid");
-    const bagSection = buildSection("背包", null, "bagGrid");
-    const secureSection = buildSection("安全箱（保险）", buildPinButton(), "secureGrid");
+    const pocketsSection = buildSection("\u53e3\u888b\uff08\u56fa\u5b9a\uff09", null, "pocketsGrid");
+    const rigSection = buildSection("\u5f39\u6302", null, "rigGrid");
+    const bagSection = buildSection("\u80cc\u5305", null, "bagGrid");
+    const secureSection = buildSection("\u5b89\u5168\u7bb1\uff08\u4fdd\u9669\uff09", buildPinButton(), "secureGrid");
 
     if (!state.isSecurePinned) {
       const one = document.createElement("div");
@@ -886,16 +1092,16 @@
     renderGrid(getGridInfoById("bag"), () => {}, true);
     renderGrid(getGridInfoById("secure"), () => {}, true);
 
-    dom.invDetail.innerHTML = "左侧默认无物品（全空）。只有右侧搜索容器有物品。";
+    dom.invDetail.innerHTML = "\u5de6\u4fa7\u9ed8\u8ba4\u65e0\u7269\u54c1\uff08\u5168\u7a7a\uff09\u3002\u53ea\u6709\u53f3\u4fa7\u641c\u7d22\u5bb9\u5668\u6709\u7269\u54c1\u3002";
   }
 
   function renderContainer() {
     const size = parseSize(dom.containerSel.value);
-    dom.containerTitle.textContent = `防寒大衣（容器 ${size.cols}×${size.rows}）`;
+    dom.containerTitle.textContent = `\u9632\u5bd2\u5927\u8863\uff08\u5bb9\u5668 ${size.cols}\u00d7${size.rows}\uff09`;
     ensureContainerItems(size.cols, size.rows);
 
     renderGrid(getGridInfoById("container"), (item) => {
-      dom.containerDetail.innerHTML = `容器物品：<b>${item.name}</b>（${item.w}×${item.h}）<br/>${item.desc}`;
+      dom.containerDetail.innerHTML = `\u5bb9\u5668\u7269\u54c1\uff1a<b>${item.name}</b>\uff08${item.w}\u00d7${item.h}\uff09<br/>${item.desc}`;
     }, true);
   }
 
@@ -906,10 +1112,10 @@
   }
 
   async function initialize() {
-    setLoadingState("正在加载物品数据...");
+    setLoadingState("\u6b63\u5728\u52a0\u8f7d\u7269\u54c1\u6570\u636e...");
 
     if (location.protocol === "file:") {
-      throw new Error("检测到你是直接打开 file:///index.html。外部 .ii 物品文件需要通过本地 HTTP 服务加载，例如在项目根目录运行 scripts\\serve.ps1，然后访问 http://localhost:8080/");
+      throw new Error("\u68c0\u6d4b\u5230\u4f60\u662f\u76f4\u63a5\u6253\u5f00 file:///index.html\u3002\u5916\u90e8 .ii \u7269\u54c1\u6587\u4ef6\u9700\u8981\u901a\u8fc7\u672c\u5730 HTTP \u670d\u52a1\u52a0\u8f7d\uff0c\u4f8b\u5982\u5728\u9879\u76ee\u6839\u76ee\u5f55\u8fd0\u884c scripts\\serve.ps1\uff0c\u7136\u540e\u8bbf\u95ee http://localhost:8080/");
     }
 
     itemInstances = await loadItemDefinitions();
@@ -923,9 +1129,39 @@
   });
   dom.containerSel.addEventListener("change", renderContainer);
 
+  window.addEventListener("keydown", (event) => {
+    if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    const tagName = event.target && event.target.tagName;
+    if (tagName && ["INPUT", "TEXTAREA", "SELECT"].includes(tagName)) {
+      return;
+    }
+
+    if ((event.key === "r" || event.key === "R") && state.dragState) {
+      if (rotateDraggedItem()) {
+        event.preventDefault();
+      }
+    }
+  });
   initialize().catch((error) => {
     setLoadError(error);
     console.error(error);
   });
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
