@@ -275,6 +275,10 @@
   const ITEM_INFO_INDEX_PATH = "./src/items/item_info/index.json";
   const ITEM_INFO_BASE_PATH = "./src/items/item_info";
   const ITEM_ICON_BASE_PATH = "./src/items/item_icons";
+  const SLOT_ART = {
+    rigGrid: "./ammo_rack_slot.png",
+    bagGrid: "./backpack_slot.png"
+  };
   const SLOT_OUTER_COLOR = "#494b49";
   const SLOT_INNER_COLOR = "#2f2f2e";
   const SLOT_OUTER_WIDTH = "2px";
@@ -309,6 +313,8 @@
   const dom = {
     rigSel: document.getElementById("rigSel"),
     bagSel: document.getElementById("bagSel"),
+    equipRigSel: document.getElementById("equipRigSel"),
+    equipBagSel: document.getElementById("equipBagSel"),
     secureSel: document.getElementById("secureSel"),
     invLayout: document.getElementById("invLayout"),
     invDetail: document.getElementById("invDetail"),
@@ -369,6 +375,19 @@
   function clearSelectedItem() {
     state.activeItemGridId = "";
     state.activeItemId = "";
+  }
+
+  function isEquippedValue(value) {
+    return !!value && value !== "none";
+  }
+
+  function syncEquipmentSelections() {
+    if (dom.equipRigSel && dom.rigSel && dom.rigSel.value !== dom.equipRigSel.value) {
+      dom.rigSel.value = dom.equipRigSel.value;
+    }
+    if (dom.equipBagSel && dom.bagSel && dom.bagSel.value !== dom.equipBagSel.value) {
+      dom.bagSel.value = dom.equipBagSel.value;
+    }
   }
 
   function isItemRotatable(item) {
@@ -557,7 +576,13 @@
     }
 
     if (id === "rig") {
+      if (!isEquippedValue(dom.rigSel.value)) {
+        return null;
+      }
       const el = document.getElementById("rigGrid");
+      if (!el) {
+        return null;
+      }
       const size = parseSize(dom.rigSel.value);
       return {
         id,
@@ -570,7 +595,13 @@
     }
 
     if (id === "bag") {
+      if (!isEquippedValue(dom.bagSel.value)) {
+        return null;
+      }
       const el = document.getElementById("bagGrid");
+      if (!el) {
+        return null;
+      }
       const size = parseSize(dom.bagSel.value);
       return {
         id,
@@ -976,8 +1007,12 @@
     };
   }
 
-  function buildSection(titleText, rightNode, gridId) {
+  function buildSection(titleText, rightNode, gridId, options = {}) {
+    const { artSrc = "", showGrid = true } = options;
     const wrap = document.createElement("div");
+    if (artSrc) {
+      wrap.classList.add("art-offset-section");
+    }
     const head = document.createElement("div");
     head.className = "section-head";
 
@@ -990,15 +1025,27 @@
       head.appendChild(rightNode);
     }
 
-    const grid = document.createElement("div");
-    grid.className = "grid";
-    grid.id = gridId;
-    if (gridId === "pocketsGrid") {
-      grid.classList.add("pockets-grid");
+    const body = document.createElement("div");
+    body.className = "section-body";
+    if (artSrc) {
+      const art = document.createElement("img");
+      art.className = "section-slot-art";
+      art.src = artSrc;
+      art.alt = "";
+      body.appendChild(art);
+    }
+    if (showGrid) {
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      grid.id = gridId;
+      if (gridId === "pocketsGrid") {
+        grid.classList.add("pockets-grid");
+      }
+      body.appendChild(grid);
     }
 
     wrap.appendChild(head);
-    wrap.appendChild(grid);
+    wrap.appendChild(body);
     return wrap;
   }
 
@@ -1016,13 +1063,18 @@
     });
     return button;
   }
-
   function renderInventoryLayout() {
     dom.invLayout.innerHTML = "";
 
-    const pocketsSection = buildSection("\u53e3\u888b\uff08\u56fa\u5b9a\uff09", null, "pocketsGrid");
-    const rigSection = buildSection("\u5f39\u6302", null, "rigGrid");
-    const bagSection = buildSection("\u80cc\u5305", null, "bagGrid");
+    const pocketsSection = buildSection("\u53e3\u888b", null, "pocketsGrid");
+    const rigSection = buildSection("", null, "rigGrid", {
+      artSrc: SLOT_ART.rigGrid,
+      showGrid: isEquippedValue(dom.rigSel.value)
+    });
+    const bagSection = buildSection("", null, "bagGrid", {
+      artSrc: SLOT_ART.bagGrid,
+      showGrid: isEquippedValue(dom.bagSel.value)
+    });
     const secureSection = buildSection("\u5b89\u5168\u7bb1\uff08\u4fdd\u9669\uff09", buildPinButton(), "secureGrid");
 
     if (!state.isSecurePinned) {
@@ -1053,7 +1105,6 @@
     two.appendChild(secondColumn);
     dom.invLayout.appendChild(two);
   }
-
   function ensureContainerItems(cols, rows) {
     const sizeKey = `${cols}x${rows}`;
     if (state.containerItems.length === 0 || state.containerSizeKey !== sizeKey) {
@@ -1069,28 +1120,51 @@
     const bagKey = dom.bagSel.value;
     const secureKey = dom.secureSel.value;
 
-    if (state.rigItems.length && state.rigSizeKey !== rigKey) {
-      state.rigItems = [];
+    if (isEquippedValue(rigKey)) {
+      if (state.rigItems.length && state.rigSizeKey && state.rigSizeKey !== rigKey && state.rigSizeKey !== "none") {
+        state.rigItems = [];
+      }
+      state.rigSizeKey = rigKey;
+    } else if (!state.rigSizeKey) {
+      state.rigSizeKey = rigKey;
     }
-    if (state.bagItems.length && state.bagSizeKey !== bagKey) {
-      state.bagItems = [];
+
+    if (isEquippedValue(bagKey)) {
+      if (state.bagItems.length && state.bagSizeKey && state.bagSizeKey !== bagKey && state.bagSizeKey !== "none") {
+        state.bagItems = [];
+      }
+      state.bagSizeKey = bagKey;
+    } else if (!state.bagSizeKey) {
+      state.bagSizeKey = bagKey;
     }
+
     if (state.secureItems.length && state.secureSizeKey !== secureKey) {
       state.secureItems = [];
     }
 
-    state.rigSizeKey = rigKey;
-    state.bagSizeKey = bagKey;
     state.secureSizeKey = secureKey;
   }
 
   function renderInventoryGrids() {
     ensureInventoryItems();
 
-    renderGrid(getGridInfoById("pockets"), () => {}, true);
-    renderGrid(getGridInfoById("rig"), () => {}, true);
-    renderGrid(getGridInfoById("bag"), () => {}, true);
-    renderGrid(getGridInfoById("secure"), () => {}, true);
+    const pocketsGrid = getGridInfoById("pockets");
+    const rigGrid = getGridInfoById("rig");
+    const bagGrid = getGridInfoById("bag");
+    const secureGrid = getGridInfoById("secure");
+
+    if (pocketsGrid) {
+      renderGrid(pocketsGrid, () => {}, true);
+    }
+    if (rigGrid) {
+      renderGrid(rigGrid, () => {}, true);
+    }
+    if (bagGrid) {
+      renderGrid(bagGrid, () => {}, true);
+    }
+    if (secureGrid) {
+      renderGrid(secureGrid, () => {}, true);
+    }
 
     dom.invDetail.innerHTML = "\u5de6\u4fa7\u9ed8\u8ba4\u65e0\u7269\u54c1\uff08\u5168\u7a7a\uff09\u3002\u53ea\u6709\u53f3\u4fa7\u641c\u7d22\u5bb9\u5668\u6709\u7269\u54c1\u3002";
   }
@@ -1118,6 +1192,7 @@
       throw new Error("\u68c0\u6d4b\u5230\u4f60\u662f\u76f4\u63a5\u6253\u5f00 file:///index.html\u3002\u5916\u90e8 .ii \u7269\u54c1\u6587\u4ef6\u9700\u8981\u901a\u8fc7\u672c\u5730 HTTP \u670d\u52a1\u52a0\u8f7d\uff0c\u4f8b\u5982\u5728\u9879\u76ee\u6839\u76ee\u5f55\u8fd0\u884c scripts\\serve.ps1\uff0c\u7136\u540e\u8bbf\u95ee http://localhost:8080/");
     }
 
+    syncEquipmentSelections();
     itemInstances = await loadItemDefinitions();
     renderInventoryLayout();
     renderInventoryGrids();
@@ -1126,6 +1201,16 @@
 
   [dom.rigSel, dom.bagSel, dom.secureSel].forEach((select) => {
     select.addEventListener("change", renderInventoryGrids);
+  });
+  [dom.equipRigSel, dom.equipBagSel].forEach((select) => {
+    if (!select) {
+      return;
+    }
+    select.addEventListener("change", () => {
+      syncEquipmentSelections();
+      renderInventoryLayout();
+      renderInventoryGrids();
+    });
   });
   dom.containerSel.addEventListener("change", renderContainer);
 
@@ -1150,6 +1235,12 @@
     console.error(error);
   });
 })();
+
+
+
+
+
+
 
 
 

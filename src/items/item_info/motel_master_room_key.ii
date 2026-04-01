@@ -1,0 +1,10 @@
+{
+  "displayId": "主",
+  "internalId": "motel_master_room_key",
+  "texture": "motel_master_room_key.png",
+  "tint": "#4C300F",
+  "size": { "w": 1, "h": 1 },
+  "category": "钥匙",
+  "name": "汽车旅馆主客房钥匙",
+  "desc": "1格(1×1)"
+}

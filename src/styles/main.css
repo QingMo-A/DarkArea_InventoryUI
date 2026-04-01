@@ -118,6 +118,34 @@ body{
   align-items:center;
 }
 
+.inventory-controls{
+  display:none;
+}
+.equipment-panel{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.equipment-row{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+
+.equipment-field{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  color: var(--muted);
+  font-size:12px;
+}
+
+.equipment-detail{
+  margin-top:0;
+}
+
+
 .controls label{
   display:flex;
   gap:8px;
@@ -147,6 +175,27 @@ select{
   color: var(--muted);
   font-size:12px;
   user-select:none;
+}
+
+.section-body{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.section-slot-art{
+  display:block;
+  flex:0 0 auto;
+  width:126px;
+  height:auto;
+  object-fit:contain;
+  user-select:none;
+  pointer-events:none;
+  transform: translateY(-15%);
+}
+
+.art-offset-section{
+  margin-top:19px;
 }
 
 .pin-btn{
@@ -449,6 +498,13 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
+
+
+
+
+
+
 
 
 

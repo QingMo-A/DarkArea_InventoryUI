@@ -1,0 +1,10 @@
+{
+  "displayId": "企",
+  "internalId": "planning_office_key",
+  "texture": "planning_office_key.png",
+  "tint": "#4C300F",
+  "size": { "w": 1, "h": 1 },
+  "category": "钥匙",
+  "name": "企划室钥匙",
+  "desc": "1格(1×1)"
+}

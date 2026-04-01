@@ -63,3 +63,4 @@ Original prompt: 看看这个项目都写了什么
 \n- 2026-03-31 drag rotation preview fix: removed the stray rerenderAll() inside rotateDraggedItem(); drag rotation now updates only the current drag visuals so left inventory grids keep their drop preview visible immediately after pressing R.
 \n- 2026-03-31 drop refresh fix: restored rerenderAll() in moveItemBetweenGrids() after successful cross-grid drops; placement now redraws immediately again while drag rotation still avoids full rerenders.
 \n- 2026-03-31 drag center snap: changed drag start to snap the dragged item center under the pointer and switched drag rotation to recompute a centered anchor so the ghost stays pointer-centered after pressing R.
+\n- 2026-03-31 item additions: added three 1x1 gold-tint key items via external item files and copied their icons into src/items/item_icons: AOC机密档案室门禁卡, 汽车旅馆主客房钥匙, 企划室钥匙.

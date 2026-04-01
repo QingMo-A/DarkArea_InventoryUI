@@ -21,14 +21,34 @@
         <div class="panel">
           <div class="panel-title">装备</div>
           <div class="panel-body">
-            <div class="detail">装备区先略（你要的重点已在右1/2物品区）。</div>
+            <div class="equipment-panel">
+              <div class="equipment-row">
+                <label class="equipment-field">弹挂
+                  <select id="equipRigSel">
+                    <option value="none" selected>未装备</option>
+                    <option value="4x3">轻型弹挂（4×3）</option>
+                    <option value="5x4">中型弹挂（5×4）</option>
+                    <option value="6x4">重型弹挂（6×4）</option>
+                  </select>
+                </label>
+                <label class="equipment-field">背包
+                  <select id="equipBagSel">
+                    <option value="none" selected>未装备</option>
+                    <option value="6x5">小型背包（6×5）</option>
+                    <option value="7x6">中型背包（7×6）</option>
+                    <option value="8x7">大型背包（8×7）</option>
+                  </select>
+                </label>
+              </div>
+              <div class="detail equipment-detail">默认未装备弹挂和背包。装备后，物品分区才会显示对应格子。</div>
+            </div>
           </div>
         </div>
 
         <div class="panel">
           <div class="panel-title">物品</div>
           <div class="panel-body">
-            <div class="controls">
+            <div class="controls inventory-controls">
               <label>口袋
                 <select id="pocketsSel">
                   <option value="4x1">固定 4格（4×1）</option>
@@ -36,13 +56,15 @@
               </label>
               <label>弹挂
                 <select id="rigSel">
-                  <option value="4x3">小（4×3）</option>
+                  <option value="none" selected>未装备</option>
+                  <option value="4x3">轻（4×3）</option>
                   <option value="5x4">中（5×4）</option>
-                  <option value="6x4">大（6×4）</option>
+                  <option value="6x4">重（6×4）</option>
                 </select>
               </label>
               <label>背包
                 <select id="bagSel">
+                  <option value="none" selected>未装备</option>
                   <option value="6x5">小（6×5）</option>
                   <option value="7x6">中（7×6）</option>
                   <option value="8x7">大（8×7）</option>
@@ -102,3 +124,5 @@
   <script defer src="./src/js/app.js"></script>
 </body>
 </html>
+
+
