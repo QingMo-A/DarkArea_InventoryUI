@@ -1,0 +1,14 @@
+id=rap_simple_rig
+name=Rap Simple Rig
+type=rig
+icon=rap_simple_rig.png
+
+[grid]
+####
+####
+####
+[/grid]
+
+[breaks]
+[/breaks]
+

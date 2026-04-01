@@ -1,0 +1,16 @@
+id=926_field_backpack
+name=926 Field Backpack
+type=backpack
+icon=926_field_backpack.png
+
+[grid]
+######
+######
+######
+######
+######
+[/grid]
+
+[breaks]
+[/breaks]
+

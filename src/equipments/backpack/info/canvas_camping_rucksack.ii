@@ -1,0 +1,17 @@
+id=canvas_camping_rucksack
+name=Canvas Camping Rucksack
+type=backpack
+icon=canvas_camping_rucksack.png
+
+[grid]
+#######
+#######
+#######
+#######
+#######
+#######
+[/grid]
+
+[breaks]
+[/breaks]
+

@@ -1,0 +1,15 @@
+id=als_carry_rig
+name=Als Carry Rig
+type=rig
+icon=als_carry_rig.png
+
+[grid]
+#####
+#####
+#####
+#####
+[/grid]
+
+[breaks]
+[/breaks]
+

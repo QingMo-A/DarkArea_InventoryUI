@@ -1,0 +1,15 @@
+id=b4_tactical_rig
+name=B4 Tactical Rig
+type=rig
+icon=b4_tactical_rig.png
+
+[grid]
+#####
+#####
+#####
+#####
+[/grid]
+
+[breaks]
+[/breaks]
+

@@ -23,24 +23,18 @@
           <div class="panel-body">
             <div class="equipment-panel">
               <div class="equipment-row">
-                <label class="equipment-field">弹挂
-                  <select id="equipRigSel">
-                    <option value="none" selected>未装备</option>
-                    <option value="4x3">轻型弹挂（4×3）</option>
-                    <option value="5x4">中型弹挂（5×4）</option>
-                    <option value="6x4">重型弹挂（6×4）</option>
-                  </select>
-                </label>
-                <label class="equipment-field">背包
-                  <select id="equipBagSel">
-                    <option value="none" selected>未装备</option>
-                    <option value="6x5">小型背包（6×5）</option>
-                    <option value="7x6">中型背包（7×6）</option>
-                    <option value="8x7">大型背包（8×7）</option>
-                  </select>
-                </label>
+                <div class="equipment-field">
+                  <div class="equipment-label">弹挂</div>
+                  <select id="equipRigSel" class="equipment-select"></select>
+                  <div id="equipRigPicker" class="equipment-picker"></div>
+                </div>
+                <div class="equipment-field">
+                  <div class="equipment-label">背包</div>
+                  <select id="equipBagSel" class="equipment-select"></select>
+                  <div id="equipBagPicker" class="equipment-picker"></div>
+                </div>
               </div>
-              <div class="detail equipment-detail">默认未装备弹挂和背包。装备后，物品分区才会显示对应格子。</div>
+              <div class="detail equipment-detail">默认未装备弹挂和背包。点击装备卡片后，物品分区会按当前装备显示对应格子。</div>
             </div>
           </div>
         </div>
@@ -124,5 +118,6 @@
   <script defer src="./src/js/app.js"></script>
 </body>
 </html>
+
 
 

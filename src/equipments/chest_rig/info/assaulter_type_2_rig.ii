@@ -1,0 +1,14 @@
+id=assaulter_type_2_rig
+name=Assaulter Type 2 Rig
+type=rig
+icon=assaulter_type_2_rig.png
+
+[grid]
+####
+####
+####
+[/grid]
+
+[breaks]
+[/breaks]
+

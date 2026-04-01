@@ -1,0 +1,15 @@
+id=b3_general_purpose_rig
+name=B3 General Purpose Rig
+type=rig
+icon=b3_general_purpose_rig.png
+
+[grid]
+#####
+#####
+#####
+#####
+[/grid]
+
+[breaks]
+[/breaks]
+

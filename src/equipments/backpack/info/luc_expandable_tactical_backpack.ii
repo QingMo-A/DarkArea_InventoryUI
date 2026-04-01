@@ -1,0 +1,18 @@
+id=luc_expandable_tactical_backpack
+name=Luc Expandable Tactical Backpack
+type=backpack
+icon=luc_expandable_tactical_backpack.png
+
+[grid]
+########
+########
+########
+########
+########
+########
+########
+[/grid]
+
+[breaks]
+[/breaks]
+

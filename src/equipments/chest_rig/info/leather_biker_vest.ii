@@ -1,0 +1,14 @@
+id=leather_biker_vest
+name=Leather Biker Vest
+type=rig
+icon=leather_biker_vest.png
+
+[grid]
+####
+####
+####
+[/grid]
+
+[breaks]
+[/breaks]
+

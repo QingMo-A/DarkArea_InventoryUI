@@ -1,0 +1,14 @@
+id=bh2_chest_rig
+name=Bh2 Chest Rig
+type=rig
+icon=bh2_chest_rig.png
+
+[grid]
+####
+####
+####
+[/grid]
+
+[breaks]
+[/breaks]
+

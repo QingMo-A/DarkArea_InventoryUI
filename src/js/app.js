@@ -191,6 +191,8 @@
 
   function canPlaceItem(gridModel, occupied, item, x, y) {
     const footprint = getItemFootprint(item);
+    const footprintCells = new Set(footprint.map((cell) => makeCellKey(cell.x, cell.y)));
+
     for (const cell of footprint) {
       const targetX = x + cell.x;
       const targetY = y + cell.y;
@@ -198,11 +200,20 @@
       if (!slot || !slot.enabled || occupied.has(makeCellKey(targetX, targetY))) {
         return false;
       }
+
+      const rightKey = makeCellKey(cell.x + 1, cell.y);
+      if (footprintCells.has(rightKey) && !slot.links.right) {
+        return false;
+      }
+
+      const downKey = makeCellKey(cell.x, cell.y + 1);
+      if (footprintCells.has(downKey) && !slot.links.down) {
+        return false;
+      }
     }
 
     return true;
   }
-
   function markOccupiedCells(occupied, item, x, y) {
     getItemFootprint(item).forEach((cell) => {
       occupied.add(makeCellKey(x + cell.x, y + cell.y));
@@ -276,13 +287,50 @@
   const ITEM_INFO_BASE_PATH = "./src/items/item_info";
   const ITEM_ICON_BASE_PATH = "./src/items/item_icons";
   const SLOT_ART = {
-    rigGrid: "./ammo_rack_slot.png",
-    bagGrid: "./backpack_slot.png"
+    rig: {
+      empty: "./ammo_rack_slot.png",
+      full: "./ammo_rack_slot_full.png"
+    },
+    bag: {
+      empty: "./backpack_slot.png",
+      full: "./backpack_slot_full.png"
+    }
   };
+  const EQUIPMENT_INFO_INDEX_PATHS = {
+    rig: "./src/equipments/chest_rig/info/index.json",
+    bag: "./src/equipments/backpack/info/index.json"
+  };
+  const EQUIPMENT_ICON_BASE_PATHS = {
+    rig: "./src/equipments/chest_rig/icons",
+    bag: "./src/equipments/backpack/icons"
+  };
+  const NONE_EQUIPMENT = {
+    id: "none",
+    name: "未装备",
+    type: "",
+    icon: "",
+    cols: 0,
+    rows: 0,
+    model: null
+  };
+  let equipmentCatalog = {
+    rig: [NONE_EQUIPMENT],
+    bag: [NONE_EQUIPMENT]
+  };
+
+  function humanizeEquipmentName(id) {
+    return id
+      .split("_")
+      .map((part) => (/^\d+$/.test(part)
+        ? part
+        : part.charAt(0).toUpperCase() + part.slice(1)))
+      .join(" ");
+  }
   const SLOT_OUTER_COLOR = "#494b49";
   const SLOT_INNER_COLOR = "#2f2f2e";
   const SLOT_OUTER_WIDTH = "2px";
   const SLOT_INNER_WIDTH = "2px";
+  const SLOT_BREAK_GAP_HALF = "6px";
   const itemRegistry = new ItemRegistry();
   let itemInstances = [];
 
@@ -315,6 +363,8 @@
     bagSel: document.getElementById("bagSel"),
     equipRigSel: document.getElementById("equipRigSel"),
     equipBagSel: document.getElementById("equipBagSel"),
+    equipRigPicker: document.getElementById("equipRigPicker"),
+    equipBagPicker: document.getElementById("equipBagPicker"),
     secureSel: document.getElementById("secureSel"),
     invLayout: document.getElementById("invLayout"),
     invDetail: document.getElementById("invDetail"),
@@ -349,6 +399,166 @@
     return JSON.parse(await response.text());
   }
 
+  async function fetchTextFile(path) {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Failed to load ${path}: ${response.status} ${response.statusText}`);
+    }
+
+    return response.text();
+  }
+
+  function parseEquipmentBreaks(lines) {
+    const breaks = new Set();
+    const dirMap = { u: "up", r: "right", d: "down", l: "left" };
+
+    lines.forEach((line) => {
+      const match = line.match(/^(\d+)\s*,\s*(\d+)\s*:\s*([urdl])$/i);
+      if (!match) {
+        return;
+      }
+
+      const [, x, y, dir] = match;
+      breaks.add(`${x}:${y}:${dirMap[dir.toLowerCase()]}`);
+    });
+
+    return breaks;
+  }
+
+  function createSlotGridFromEquipmentLayout(gridRows, breaks) {
+    const rows = gridRows.length;
+    const cols = gridRows.reduce((max, row) => Math.max(max, row.length), 0);
+
+    const hasEnabledCell = (col, row) => {
+      if (row < 0 || row >= rows || col < 0 || col >= cols) {
+        return false;
+      }
+      return (gridRows[row] && gridRows[row][col]) === "#";
+    };
+
+    return createSlotGrid({
+      cols,
+      rows,
+      cellFactory({ col, row }) {
+        const enabled = hasEnabledCell(col, row);
+        if (!enabled) {
+          return { enabled: false };
+        }
+
+        return {
+          enabled: true,
+          links: {
+            up: hasEnabledCell(col, row - 1) && !breaks.has(`${col}:${row}:up`),
+            right: hasEnabledCell(col + 1, row) && !breaks.has(`${col}:${row}:right`),
+            down: hasEnabledCell(col, row + 1) && !breaks.has(`${col}:${row}:down`),
+            left: hasEnabledCell(col - 1, row) && !breaks.has(`${col}:${row}:left`)
+          }
+        };
+      }
+    });
+  }
+
+  function parseEquipmentInfoFile(text, kind) {
+    const metadata = {};
+    const gridRows = [];
+    const breakLines = [];
+    let section = "";
+
+    text.split(/\r?\n/).forEach((rawLine) => {
+      const trimmed = rawLine.trim();
+
+      if (section === "grid") {
+        if (trimmed === "[/grid]") {
+          section = "";
+          return;
+        }
+        if (trimmed) {
+          gridRows.push(trimmed.replace(/\s+/g, ""));
+        }
+        return;
+      }
+
+      if (section === "breaks") {
+        if (trimmed === "[/breaks]") {
+          section = "";
+          return;
+        }
+        if (trimmed && !trimmed.startsWith(";")) {
+          breakLines.push(trimmed);
+        }
+        return;
+      }
+
+      if (!trimmed || trimmed.startsWith(";")) {
+        return;
+      }
+
+      if (trimmed === "[grid]") {
+        section = "grid";
+        return;
+      }
+      if (trimmed === "[breaks]") {
+        section = "breaks";
+        return;
+      }
+
+      const separatorIndex = trimmed.indexOf("=");
+      if (separatorIndex === -1) {
+        return;
+      }
+
+      const key = trimmed.slice(0, separatorIndex).trim();
+      const value = trimmed.slice(separatorIndex + 1).trim();
+      metadata[key] = value;
+    });
+
+    if (gridRows.length === 0) {
+      throw new Error(`Equipment layout missing [grid] data for ${metadata.id || kind}`);
+    }
+
+    const breaks = parseEquipmentBreaks(breakLines);
+    const model = createSlotGridFromEquipmentLayout(gridRows, breaks);
+    const iconFile = metadata.icon || `${metadata.id}.png`;
+    const icon = iconFile.includes("/")
+      ? iconFile
+      : `${EQUIPMENT_ICON_BASE_PATHS[kind]}/${iconFile}`;
+
+    return {
+      id: metadata.id || "",
+      name: metadata.name || humanizeEquipmentName(metadata.id || "equipment"),
+      type: metadata.type || kind,
+      icon,
+      cols: model.cols,
+      rows: model.rows,
+      model
+    };
+  }
+
+  async function loadEquipmentDefinitions() {
+    const nextCatalog = { rig: [NONE_EQUIPMENT], bag: [NONE_EQUIPMENT] };
+
+    const entries = await Promise.all(Object.entries(EQUIPMENT_INFO_INDEX_PATHS).map(async ([kind, indexPath]) => {
+      const fileNames = await fetchJsonFile(indexPath);
+      if (!Array.isArray(fileNames)) {
+        throw new Error(`Equipment manifest must be an array: ${indexPath}`);
+      }
+
+      const baseDir = indexPath.slice(0, indexPath.lastIndexOf("/"));
+      const definitions = await Promise.all(fileNames.map(async (fileName) => {
+        const text = await fetchTextFile(`${baseDir}/${fileName}`);
+        return parseEquipmentInfoFile(text, kind);
+      }));
+
+      return [kind, definitions];
+    }));
+
+    entries.forEach(([kind, definitions]) => {
+      nextCatalog[kind] = [NONE_EQUIPMENT, ...definitions];
+    });
+
+    equipmentCatalog = nextCatalog;
+  }
+
   async function loadItemDefinitions() {
     const fileNames = await fetchJsonFile(ITEM_INFO_INDEX_PATH);
     if (!Array.isArray(fileNames)) {
@@ -381,13 +591,114 @@
     return !!value && value !== "none";
   }
 
+  function getEquipmentSelect(kind) {
+    return kind === "rig" ? dom.equipRigSel : dom.equipBagSel;
+  }
+
+  function getEquipmentPicker(kind) {
+    return kind === "rig" ? dom.equipRigPicker : dom.equipBagPicker;
+  }
+
+  function getEquipmentOptions(kind) {
+    return equipmentCatalog[kind] || [NONE_EQUIPMENT];
+  }
+
+  function getSelectedEquipment(kind) {
+    const select = getEquipmentSelect(kind);
+    const options = getEquipmentOptions(kind);
+    const selectedId = select ? select.value : NONE_EQUIPMENT.id;
+    return options.find((option) => option.id === selectedId) || options[0];
+  }
+
+  function formatEquipmentSize(cols, rows) {
+    if (!cols || !rows) {
+      return "";
+    }
+
+    return `${cols}×${rows}`;
+  }
+  function populateEquipmentSelect(kind) {
+    const select = getEquipmentSelect(kind);
+    if (!select) {
+      return;
+    }
+
+    const previous = select.value || NONE_EQUIPMENT.id;
+    select.innerHTML = "";
+    getEquipmentOptions(kind).forEach((option) => {
+      const node = document.createElement("option");
+      node.value = option.id;
+      node.textContent = option.id === "none"
+        ? option.name
+        : `${option.name}（${formatEquipmentSize(option.cols, option.rows)}）`;
+      select.appendChild(node);
+    });
+
+    const hasPrevious = getEquipmentOptions(kind).some((option) => option.id === previous);
+    select.value = hasPrevious ? previous : NONE_EQUIPMENT.id;
+  }
+
+  function renderEquipmentPicker(kind) {
+    const picker = getEquipmentPicker(kind);
+    const select = getEquipmentSelect(kind);
+    if (!picker || !select) {
+      return;
+    }
+
+    const selectedId = select.value || NONE_EQUIPMENT.id;
+    picker.innerHTML = "";
+
+    getEquipmentOptions(kind).forEach((option) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = `equipment-card${option.id === selectedId ? " selected" : ""}`;
+
+      const visual = document.createElement("div");
+      visual.className = option.icon ? "equipment-card-icon" : "equipment-card-empty";
+      if (option.icon) {
+        visual.style.backgroundImage = `url('${option.icon}')`;
+      } else {
+        visual.textContent = option.name;
+      }
+
+      const name = document.createElement("div");
+      name.className = "equipment-card-name";
+      name.textContent = option.name;
+
+      const size = document.createElement("div");
+      size.className = "equipment-card-size";
+      size.textContent = option.id === "none" ? "不显示格子" : `容量 ${formatEquipmentSize(option.cols, option.rows)}`;
+
+      card.appendChild(visual);
+      card.appendChild(name);
+      card.appendChild(size);
+      card.addEventListener("click", () => {
+        if (select.value === option.id) {
+          return;
+        }
+        select.value = option.id;
+        syncEquipmentSelections();
+        renderInventoryLayout();
+        renderInventoryGrids();
+      });
+
+      picker.appendChild(card);
+    });
+  }
+
   function syncEquipmentSelections() {
-    if (dom.equipRigSel && dom.rigSel && dom.rigSel.value !== dom.equipRigSel.value) {
-      dom.rigSel.value = dom.equipRigSel.value;
-    }
-    if (dom.equipBagSel && dom.bagSel && dom.bagSel.value !== dom.equipBagSel.value) {
-      dom.bagSel.value = dom.equipBagSel.value;
-    }
+    renderEquipmentPicker("rig");
+    renderEquipmentPicker("bag");
+  }
+  function initializeEquipmentSelectors() {
+    populateEquipmentSelect("rig");
+    populateEquipmentSelect("bag");
+    syncEquipmentSelections();
+  }
+
+  function getSelectedEquipmentIcon(kind) {
+    const equipment = getSelectedEquipment(kind);
+    return equipment && equipment.icon ? equipment.icon : "";
   }
 
   function isItemRotatable(item) {
@@ -576,43 +887,41 @@
     }
 
     if (id === "rig") {
-      if (!isEquippedValue(dom.rigSel.value)) {
+      const equipment = getSelectedEquipment("rig");
+      if (!isEquippedValue(equipment.id)) {
         return null;
       }
       const el = document.getElementById("rigGrid");
       if (!el) {
         return null;
       }
-      const size = parseSize(dom.rigSel.value);
       return {
         id,
         el,
-        cols: size.cols,
-        rows: size.rows,
+        cols: equipment.cols,
+        rows: equipment.rows,
         items: state.rigItems,
-        model: buildGridModel(id, size.cols, size.rows)
+        model: equipment.model
       };
     }
-
     if (id === "bag") {
-      if (!isEquippedValue(dom.bagSel.value)) {
+      const equipment = getSelectedEquipment("bag");
+      if (!isEquippedValue(equipment.id)) {
         return null;
       }
       const el = document.getElementById("bagGrid");
       if (!el) {
         return null;
       }
-      const size = parseSize(dom.bagSel.value);
       return {
         id,
         el,
-        cols: size.cols,
-        rows: size.rows,
+        cols: equipment.cols,
+        rows: equipment.rows,
         items: state.bagItems,
-        model: buildGridModel(id, size.cols, size.rows)
+        model: equipment.model
       };
     }
-
     if (id === "secure") {
       const el = document.getElementById("secureGrid");
       const size = parseSize(dom.secureSel.value);
@@ -775,7 +1084,7 @@
     dragState.preview.classList.toggle("invalid", !dropTarget.canDrop);
   }
 
-  function applyCellBorders(cell, slot, gridModel) {
+  function applyCellBorders(cell, slot, gridModel, gridId) {
     const right = getSlot(gridModel, slot.col + 1, slot.row);
     const down = getSlot(gridModel, slot.col, slot.row + 1);
     const left = getSlot(gridModel, slot.col - 1, slot.row);
@@ -784,6 +1093,11 @@
     const leftConnected = slot.links.left && left;
     const rightConnected = slot.links.right && right;
     const bottomConnected = slot.links.down && down;
+    const allowBreakGap = gridId !== "pockets";
+    const topBreakGap = allowBreakGap && up && up.enabled && !topConnected ? SLOT_BREAK_GAP_HALF : "0px";
+    const leftBreakGap = allowBreakGap && left && left.enabled && !leftConnected ? SLOT_BREAK_GAP_HALF : "0px";
+    const rightBreakGap = allowBreakGap && right && right.enabled && !rightConnected ? SLOT_BREAK_GAP_HALF : "0px";
+    const bottomBreakGap = allowBreakGap && down && down.enabled && !bottomConnected ? SLOT_BREAK_GAP_HALF : "0px";
 
     cell.style.borderTopColor = topConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
     cell.style.borderLeftColor = leftConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
@@ -793,8 +1107,11 @@
     cell.style.borderLeftWidth = leftConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
     cell.style.borderRightWidth = rightConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
     cell.style.borderBottomWidth = bottomConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
+    cell.style.marginTop = topBreakGap;
+    cell.style.marginLeft = leftBreakGap;
+    cell.style.marginRight = rightBreakGap;
+    cell.style.marginBottom = bottomBreakGap;
   }
-
   function renderGrid(gridInfo, onItemClick, allowDrag = false) {
     const { el, model, items } = gridInfo;
     el.style.setProperty("--cols", model.cols);
@@ -822,7 +1139,7 @@
         cell.className = "cell";
         cell.style.gridColumn = String(col + 1);
         cell.style.gridRow = String(row + 1);
-        applyCellBorders(cell, slot, model);
+        applyCellBorders(cell, slot, model, gridId);
         el.appendChild(cell);
       }
     }
@@ -1008,7 +1325,12 @@
   }
 
   function buildSection(titleText, rightNode, gridId, options = {}) {
-    const { artSrc = "", showGrid = true } = options;
+    const {
+      artSrc = "",
+      overlayArtSrc = "",
+      overlayOffsetPercent = 15,
+      showGrid = true
+    } = options;
     const wrap = document.createElement("div");
     if (artSrc) {
       wrap.classList.add("art-offset-section");
@@ -1028,11 +1350,25 @@
     const body = document.createElement("div");
     body.className = "section-body";
     if (artSrc) {
+      const artStack = document.createElement("div");
+      artStack.className = "section-art-stack";
+
       const art = document.createElement("img");
       art.className = "section-slot-art";
       art.src = artSrc;
       art.alt = "";
-      body.appendChild(art);
+      artStack.appendChild(art);
+
+      if (overlayArtSrc) {
+        const overlay = document.createElement("img");
+        overlay.className = "section-equipped-art";
+        overlay.src = overlayArtSrc;
+        overlay.alt = "";
+        overlay.style.top = `${overlayOffsetPercent}%`;
+        artStack.appendChild(overlay);
+      }
+
+      body.appendChild(artStack);
     }
     if (showGrid) {
       const grid = document.createElement("div");
@@ -1067,13 +1403,17 @@
     dom.invLayout.innerHTML = "";
 
     const pocketsSection = buildSection("\u53e3\u888b", null, "pocketsGrid");
+    const rigEquipment = getSelectedEquipment("rig");
+    const bagEquipment = getSelectedEquipment("bag");
     const rigSection = buildSection("", null, "rigGrid", {
-      artSrc: SLOT_ART.rigGrid,
-      showGrid: isEquippedValue(dom.rigSel.value)
+      artSrc: isEquippedValue(rigEquipment.id) ? SLOT_ART.rig.full : SLOT_ART.rig.empty,
+      overlayArtSrc: isEquippedValue(rigEquipment.id) ? getSelectedEquipmentIcon("rig") : "",
+      showGrid: isEquippedValue(rigEquipment.id)
     });
     const bagSection = buildSection("", null, "bagGrid", {
-      artSrc: SLOT_ART.bagGrid,
-      showGrid: isEquippedValue(dom.bagSel.value)
+      artSrc: isEquippedValue(bagEquipment.id) ? SLOT_ART.bag.full : SLOT_ART.bag.empty,
+      overlayArtSrc: isEquippedValue(bagEquipment.id) ? getSelectedEquipmentIcon("bag") : "",
+      showGrid: isEquippedValue(bagEquipment.id)
     });
     const secureSection = buildSection("\u5b89\u5168\u7bb1\uff08\u4fdd\u9669\uff09", buildPinButton(), "secureGrid");
 
@@ -1116,8 +1456,10 @@
   }
 
   function ensureInventoryItems() {
-    const rigKey = dom.rigSel.value;
-    const bagKey = dom.bagSel.value;
+    const rigEquipment = getSelectedEquipment("rig");
+    const bagEquipment = getSelectedEquipment("bag");
+    const rigKey = rigEquipment.id;
+    const bagKey = bagEquipment.id;
     const secureKey = dom.secureSel.value;
 
     if (isEquippedValue(rigKey)) {
@@ -1144,7 +1486,6 @@
 
     state.secureSizeKey = secureKey;
   }
-
   function renderInventoryGrids() {
     ensureInventoryItems();
 
@@ -1192,14 +1533,15 @@
       throw new Error("\u68c0\u6d4b\u5230\u4f60\u662f\u76f4\u63a5\u6253\u5f00 file:///index.html\u3002\u5916\u90e8 .ii \u7269\u54c1\u6587\u4ef6\u9700\u8981\u901a\u8fc7\u672c\u5730 HTTP \u670d\u52a1\u52a0\u8f7d\uff0c\u4f8b\u5982\u5728\u9879\u76ee\u6839\u76ee\u5f55\u8fd0\u884c scripts\\serve.ps1\uff0c\u7136\u540e\u8bbf\u95ee http://localhost:8080/");
     }
 
-    syncEquipmentSelections();
+    await loadEquipmentDefinitions();
+    initializeEquipmentSelectors();
     itemInstances = await loadItemDefinitions();
     renderInventoryLayout();
     renderInventoryGrids();
     renderContainer();
   }
 
-  [dom.rigSel, dom.bagSel, dom.secureSel].forEach((select) => {
+  [dom.secureSel].forEach((select) => {
     select.addEventListener("change", renderInventoryGrids);
   });
   [dom.equipRigSel, dom.equipBagSel].forEach((select) => {
@@ -1235,6 +1577,10 @@
     console.error(error);
   });
 })();
+
+
+
+
 
 
 

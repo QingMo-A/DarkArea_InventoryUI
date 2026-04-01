@@ -106,7 +106,7 @@ body{
 
 .panel-body{
   padding: 54px var(--pad) var(--pad) var(--pad);
-  overflow:auto;
+  overflow:visible;
   height: 100%;
 }
 
@@ -139,12 +139,87 @@ body{
   gap:8px;
   color: var(--muted);
   font-size:12px;
+  min-width:0;
+}
+
+.equipment-label{
+  color: var(--muted);
+  font-size:12px;
+}
+
+.equipment-select{
+  display:none;
+}
+
+.equipment-picker{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+  max-height:360px;
+  overflow:auto;
+  padding-right:4px;
+}
+
+.equipment-card{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:stretch;
+  padding:8px;
+  background: rgba(0,0,0,.24);
+  border:1px solid rgba(255,255,255,.08);
+  color: var(--text);
+  cursor:pointer;
+  min-width:0;
+}
+
+.equipment-card:hover{
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.04);
+}
+
+.equipment-card.selected{
+  border-color:#494b49;
+  box-shadow: 0 0 0 1px rgba(73,75,73,.35);
+  background: rgba(255,255,255,.05);
+}
+
+.equipment-card-icon,
+.equipment-card-empty{
+  height:74px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(12,12,12,.9);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.equipment-card-icon{
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:contain;
+}
+
+.equipment-card-empty{
+  color: var(--muted);
+  font-size:12px;
+}
+
+.equipment-card-name{
+  font-size:12px;
+  line-height:1.35;
+  color: rgba(255,255,255,.88);
+  word-break:break-word;
+}
+
+.equipment-card-size{
+  font-size:11px;
+  color: rgba(255,255,255,.58);
 }
 
 .equipment-detail{
   margin-top:0;
 }
-
 
 .controls label{
   display:flex;
@@ -183,15 +258,31 @@ select{
   gap:10px;
 }
 
-.section-slot-art{
+.section-art-stack{
+  position:relative;
   display:block;
   flex:0 0 auto;
   width:126px;
   height:auto;
-  object-fit:contain;
   user-select:none;
   pointer-events:none;
   transform: translateY(-15%);
+}
+
+.section-slot-art{
+  display:block;
+  width:100%;
+  height:auto;
+  object-fit:contain;
+}
+
+.section-equipped-art{
+  position:absolute;
+  left:0;
+  width:100%;
+  height:auto;
+  object-fit:contain;
+  pointer-events:none;
 }
 
 .art-offset-section{
@@ -231,7 +322,7 @@ select{
   border: 0;
   width: fit-content;
   max-width: 100%;
-  overflow:auto;
+  overflow:visible;
   position:relative;
 }
 
@@ -498,6 +589,10 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
+
+
+
 
 
 

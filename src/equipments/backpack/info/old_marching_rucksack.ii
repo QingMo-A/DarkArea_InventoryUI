@@ -1,0 +1,16 @@
+id=old_marching_rucksack
+name=Old Marching Rucksack
+type=backpack
+icon=old_marching_rucksack.png
+
+[grid]
+######
+######
+######
+######
+######
+[/grid]
+
+[breaks]
+[/breaks]
+

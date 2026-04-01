@@ -1,0 +1,15 @@
+id=duty_tactical_vest
+name=Duty Tactical Vest
+type=rig
+icon=duty_tactical_vest.png
+
+[grid]
+#####
+#####
+#####
+#####
+[/grid]
+
+[breaks]
+[/breaks]
+

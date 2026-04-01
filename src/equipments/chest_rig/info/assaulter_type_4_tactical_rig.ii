@@ -1,0 +1,15 @@
+id=assaulter_type_4_tactical_rig
+name=Assaulter Type 4 Tactical Rig
+type=rig
+icon=assaulter_type_4_tactical_rig.png
+
+[grid]
+######
+######
+######
+######
+[/grid]
+
+[breaks]
+[/breaks]
+

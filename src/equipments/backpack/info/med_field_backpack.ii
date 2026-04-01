@@ -1,0 +1,16 @@
+id=med_field_backpack
+name=Med Field Backpack
+type=backpack
+icon=med_field_backpack.png
+
+[grid]
+######
+######
+######
+######
+######
+[/grid]
+
+[breaks]
+[/breaks]
+

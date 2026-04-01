@@ -1,0 +1,17 @@
+id=rush_tactical_backpack
+name=Rush Tactical Backpack
+type=backpack
+icon=rush_tactical_backpack.png
+
+[grid]
+####
+####
+####
+####
+####
+####
+[/grid]
+
+[breaks]
+[/breaks]
+

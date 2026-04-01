@@ -64,3 +64,22 @@ Original prompt: 看看这个项目都写了什么
 \n- 2026-03-31 drop refresh fix: restored rerenderAll() in moveItemBetweenGrids() after successful cross-grid drops; placement now redraws immediately again while drag rotation still avoids full rerenders.
 \n- 2026-03-31 drag center snap: changed drag start to snap the dragged item center under the pointer and switched drag rotation to recompute a centered anchor so the ghost stays pointer-centered after pressing R.
 \n- 2026-03-31 item additions: added three 1x1 gold-tint key items via external item files and copied their icons into src/items/item_icons: AOC机密档案室门禁卡, 汽车旅馆主客房钥匙, 企划室钥匙.
+
+- 2026-04-01 equipment picker: replaced the static rig/backpack selects with image-card pickers driven by local equipment icon catalogs in app.js; selected gear now maps to slot sizes and updates the left inventory section art while unequipped states keep the section visible but hide the grid.
+- 2026-04-01 validation: node --check src/js/app.js passes after the equipment picker refactor.
+- 2026-04-01 validation gap: Playwright is still unavailable locally, so browser automation could not be run for the equipment picker UI.
+
+- 2026-04-01 validation update: 
+px playwright --version succeeds under escalated execution (1.59.0), but the develop-web-game client still fails to import the playwright module in this environment, so automated browser screenshots remain unavailable.
+
+- 2026-04-01 slot art overlay: rig/bag sections now keep the slot art visible at all times; when equipped they switch to the _full slot art and overlay the selected equipment icon inside the slot with a 15 percent vertical offset of the slot-art height.
+
+- 2026-04-01 equipment info layouts: app.js now loads rig/backpack definitions from src/equipments/*/info/index.json and parses custom .ii files with [grid] and [breaks] sections into slot models, so equipment grids are no longer limited to rectangles in code.
+- 2026-04-01 equipment info seeds: generated initial .ii files for every current rig/backpack icon with full rectangular [grid] data and empty [breaks] blocks so the layouts can now be edited by hand in a text editor.
+
+- 2026-04-01 placement connectivity: canPlaceItem() now also checks slot links across every internal adjacency in the item footprint, so multi-slot items can no longer span across breaks between neighboring equipment cells.
+
+- 2026-04-01 grid overflow: changed .grid from overflow:auto to overflow:visible so break-gap margins no longer create inner scrollbars when non-rectangular equipment layouts widen the rendered slot lattice.
+
+- 2026-04-01 overflow fix: restored .equipment-picker scrolling after an overly broad overflow replacement; only .grid remains overflow: visible to suppress slot-grid scrollbars caused by break-gap margins.
+

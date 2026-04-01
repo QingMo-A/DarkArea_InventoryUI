@@ -1,0 +1,15 @@
+id=bh_infantry_chest_rig
+name=Bh Infantry Chest Rig
+type=rig
+icon=bh_infantry_chest_rig.png
+
+[grid]
+#####
+#####
+#####
+#####
+[/grid]
+
+[breaks]
+[/breaks]
+

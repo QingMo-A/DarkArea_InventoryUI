@@ -1,0 +1,15 @@
+id=fa_multi_purpose_chest_rig
+name=Fa Multi Purpose Chest Rig
+type=rig
+icon=fa_multi_purpose_chest_rig.png
+
+[grid]
+#####
+#####
+#####
+#####
+[/grid]
+
+[breaks]
+[/breaks]
+

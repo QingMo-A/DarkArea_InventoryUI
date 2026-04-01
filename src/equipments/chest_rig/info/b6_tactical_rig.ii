@@ -1,0 +1,15 @@
+id=b6_tactical_rig
+name=B6 Tactical Rig
+type=rig
+icon=b6_tactical_rig.png
+
+[grid]
+######
+######
+######
+######
+[/grid]
+
+[breaks]
+[/breaks]
+

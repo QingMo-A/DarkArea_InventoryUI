@@ -1,0 +1,16 @@
+id=sport_rucksack
+name=Sport Rucksack
+type=backpack
+icon=sport_rucksack.png
+
+[grid]
+####
+####
+####
+####
+####
+[/grid]
+
+[breaks]
+[/breaks]
+

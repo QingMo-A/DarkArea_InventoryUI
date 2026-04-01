@@ -1,0 +1,17 @@
+id=amp7_assault_backpack
+name=Amp7 Assault Backpack
+type=backpack
+icon=amp7_assault_backpack.png
+
+[grid]
+#######
+#######
+#######
+#######
+#######
+#######
+[/grid]
+
+[breaks]
+[/breaks]
+
