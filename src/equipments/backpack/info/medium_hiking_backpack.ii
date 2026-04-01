@@ -4,12 +4,10 @@ type=backpack
 icon=medium_hiking_backpack.png
 
 [grid]
-#######
-#######
-#######
-#######
-#######
-#######
+####
+####
+####
+####
 [/grid]
 
 [breaks]

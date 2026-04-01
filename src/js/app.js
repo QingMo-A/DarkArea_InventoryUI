@@ -149,30 +149,79 @@
     return gridModel.slots[row][col];
   }
 
-  function getCellFromEvent(gridInfo, event) {
-    const rect = gridInfo.el.getBoundingClientRect();
-    const { cell, gap } = getCellSize(gridInfo.el);
-    const localX = event.clientX - rect.left;
-    const localY = event.clientY - rect.top;
-
-    if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) {
-      return null;
-    }
-
-    const step = cell + gap;
-    const x = localX + gridInfo.el.scrollLeft;
-    const y = localY + gridInfo.el.scrollTop;
-    const col = Math.floor(x / step);
-    const row = Math.floor(y / step);
-    const slot = getSlot(gridInfo.model, col, row);
-
-    if (!slot || !slot.enabled) {
-      return null;
-    }
-
-    return { col, row, slot };
+  function getRenderedCellMap(gridElement) {
+    return gridElement.__cellMap || new Map();
   }
 
+  function getPlacedItemRect(gridElement, cellMap, item, x = item.x, y = item.y) {
+    const gridRect = gridElement.getBoundingClientRect();
+    const cells = getItemFootprint(item)
+      .map((cell) => cellMap.get(makeCellKey(x + cell.x, y + cell.y)))
+      .filter(Boolean);
+
+    if (!cells.length) {
+      return null;
+    }
+
+    let left = Infinity;
+    let top = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+
+    cells.forEach((cell) => {
+      const rect = cell.getBoundingClientRect();
+      left = Math.min(left, rect.left);
+      top = Math.min(top, rect.top);
+      right = Math.max(right, rect.right);
+      bottom = Math.max(bottom, rect.bottom);
+    });
+
+    return {
+      left: left - gridRect.left + gridElement.scrollLeft,
+      top: top - gridRect.top + gridElement.scrollTop,
+      width: right - left,
+      height: bottom - top
+    };
+  }
+
+  function positionGridElement(element, gridElement, cellMap, item, x = item.x, y = item.y) {
+    const rect = getPlacedItemRect(gridElement, cellMap, item, x, y);
+    if (!rect) {
+      return false;
+    }
+
+    element.style.position = "absolute";
+    element.style.left = `${rect.left}px`;
+    element.style.top = `${rect.top}px`;
+    element.style.width = `${rect.width}px`;
+    element.style.height = `${rect.height}px`;
+    element.style.gridColumn = "auto";
+    element.style.gridRow = "auto";
+    return true;
+  }
+
+  function getCellFromEvent(gridInfo, event) {
+    const cellMap = getRenderedCellMap(gridInfo.el);
+
+    for (const [key, cell] of cellMap.entries()) {
+      const rect = cell.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+        continue;
+      }
+
+      const [colText, rowText] = key.split(":");
+      const col = parseInt(colText, 10);
+      const row = parseInt(rowText, 10);
+      const slot = getSlot(gridInfo.model, col, row);
+      if (!slot || !slot.enabled) {
+        return null;
+      }
+
+      return { col, row, slot };
+    }
+
+    return null;
+  }
   function buildOccupiedCells(items, ignoreId) {
     const occupied = new Set();
 
@@ -328,8 +377,8 @@
   }
   const SLOT_OUTER_COLOR = "#494b49";
   const SLOT_INNER_COLOR = "#2f2f2e";
-  const SLOT_OUTER_WIDTH = "2px";
-  const SLOT_INNER_WIDTH = "2px";
+  const SLOT_OUTER_WIDTH = "1px";
+  const SLOT_INNER_WIDTH = "1px";
   const SLOT_BREAK_GAP_HALF = "6px";
   const itemRegistry = new ItemRegistry();
   let itemInstances = [];
@@ -1079,8 +1128,11 @@
       dragState.previewGridId = dropTarget.targetGrid.id;
     }
 
-    dragState.preview.style.gridColumn = `${dropTarget.position.x + 1} / span ${dragState.item.w}`;
-    dragState.preview.style.gridRow = `${dropTarget.position.y + 1} / span ${dragState.item.h}`;
+    const previewCellMap = getRenderedCellMap(dropTarget.targetGrid.el);
+    if (!positionGridElement(dragState.preview, dropTarget.targetGrid.el, previewCellMap, dragState.item, dropTarget.position.x, dropTarget.position.y)) {
+      clearDragPreview();
+      return;
+    }
     dragState.preview.classList.toggle("invalid", !dropTarget.canDrop);
   }
 
@@ -1127,6 +1179,7 @@
     const visibleItems = sourcePlaceholder
       ? placed.filter((entry) => entry.id !== sourcePlaceholder.id)
       : placed;
+    const cellMap = new Map();
 
     for (let row = 0; row < model.rows; row += 1) {
       for (let col = 0; col < model.cols; col += 1) {
@@ -1137,19 +1190,21 @@
 
         const cell = document.createElement("div");
         cell.className = "cell";
+        cell.dataset.col = String(col);
+        cell.dataset.row = String(row);
         cell.style.gridColumn = String(col + 1);
         cell.style.gridRow = String(row + 1);
         applyCellBorders(cell, slot, model, gridId);
+        cellMap.set(makeCellKey(col, row), cell);
         el.appendChild(cell);
       }
     }
 
+    el.__cellMap = cellMap;
 
     if (sourcePlaceholder) {
       const placeholder = document.createElement("div");
       placeholder.className = `item source-placeholder${sourcePlaceholder.rotated ? " rotated" : ""}`;
-      placeholder.style.gridColumn = `${sourcePlaceholder.x + 1} / span ${sourcePlaceholder.w}`;
-      placeholder.style.gridRow = `${sourcePlaceholder.y + 1} / span ${sourcePlaceholder.h}`;
       const placeholderIconStyle = sourcePlaceholder.texture ? `style="background-image:url('${sourcePlaceholder.texture}')"` : "";
       placeholder.innerHTML = `
         <div class="icon" ${placeholderIconStyle}></div>
@@ -1157,16 +1212,16 @@
         <div class="meta"></div>
       `;
       placeholder.style.setProperty("--item-tint", "transparent");
-      el.appendChild(placeholder);
-      layoutItemIcon(placeholder, !!sourcePlaceholder.rotated);
+      if (positionGridElement(placeholder, el, cellMap, sourcePlaceholder)) {
+        el.appendChild(placeholder);
+        layoutItemIcon(placeholder, !!sourcePlaceholder.rotated);
+      }
     }
 
     for (const itemData of visibleItems) {
       const item = document.createElement("div");
       item.className = `item${itemData.rotated ? " rotated" : ""}${state.activeItemGridId === gridId && state.activeItemId === itemData.id ? " active" : ""}`;
       item.dataset.itemId = itemData.id;
-      item.style.gridColumn = `${itemData.x + 1} / span ${itemData.w}`;
-      item.style.gridRow = `${itemData.y + 1} / span ${itemData.h}`;
 
       const iconStyle = itemData.texture ? `style="background-image:url('${itemData.texture}')"` : "";
       item.innerHTML = `
@@ -1204,8 +1259,6 @@
           const startX = event.clientX;
           const startY = event.clientY;
           const rect = item.getBoundingClientRect();
-          const offsetX = startX - rect.left;
-          const offsetY = startY - rect.top;
           const sourceMetrics = getCellSize(el);
           const sourceStep = sourceMetrics.cell + sourceMetrics.gap;
           let didStartDrag = false;
@@ -1233,8 +1286,6 @@
             state.dragState.preview.classList.toggle("rotated", !!itemData.rotated);
             state.dragState.preview.style.opacity = "0.35";
             state.dragState.preview.style.pointerEvents = "none";
-            state.dragState.preview.style.gridColumn = `${itemData.x + 1} / span ${itemData.w}`;
-            state.dragState.preview.style.gridRow = `${itemData.y + 1} / span ${itemData.h}`;
 
             item.classList.add("dragging");
             state.dragState.ghost.classList.remove("dragging");
@@ -1253,7 +1304,6 @@
               pickUpAudio.play();
             } catch (error) {}
           };
-
 
           const onMove = (moveEvent) => {
             if (!state.dragState) {
@@ -1313,9 +1363,11 @@
         });
       }
 
-      el.appendChild(item);
-      layoutItemIcon(item, !!itemData.rotated);
-      renderItemInternalLines(item, itemData, el);
+      if (positionGridElement(item, el, cellMap, itemData)) {
+        el.appendChild(item);
+        layoutItemIcon(item, !!itemData.rotated);
+        renderItemInternalLines(item, itemData, el);
+      }
     }
 
     el.onclick = () => {
@@ -1323,7 +1375,6 @@
       clearSelectedItem();
     };
   }
-
   function buildSection(titleText, rightNode, gridId, options = {}) {
     const {
       artSrc = "",
@@ -1577,6 +1628,7 @@
     console.error(error);
   });
 })();
+
 
 
 

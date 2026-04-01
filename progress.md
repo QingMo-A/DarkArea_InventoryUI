@@ -83,3 +83,5 @@ px playwright --version succeeds under escalated execution (1.59.0), but the dev
 
 - 2026-04-01 overflow fix: restored .equipment-picker scrolling after an overly broad overflow replacement; only .grid remains overflow: visible to suppress slot-grid scrollbars caused by break-gap margins.
 
+- 2026-04-01 rendered-slot alignment: switched cell hit-testing, drag preview placement, source placeholders, and item layout to use the actual rendered .cell bounding boxes rather than only the regular grid step, so disconnected equipment slots and their visual offsets now drive placement geometry too.
+
