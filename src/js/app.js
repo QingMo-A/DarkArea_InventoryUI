@@ -153,6 +153,165 @@
     return gridElement.__cellMap || new Map();
   }
 
+  function getBreakGapSize(gridId) {
+    return gridId !== "pockets" ? parseFloat(SLOT_BREAK_GAP_HALF) * 2 : 0;
+  }
+
+  function buildSlotLayoutMap(gridModel, gridId, gridElement) {
+    const { cell, gap } = getCellSize(gridElement);
+    const step = cell + gap;
+    const breakGap = getBreakGapSize(gridId);
+    const positions = new Map();
+    let minLeft = Infinity;
+    let minTop = Infinity;
+    let maxRight = -Infinity;
+    let maxBottom = -Infinity;
+
+    function pickAnchorSegment(segments) {
+      if (!segments.length) {
+        return -1;
+      }
+
+      let bestIndex = 0;
+      let bestLength = -1;
+      let bestCenterDistance = Infinity;
+      const center = (segments[0].axisSpan - 1) / 2;
+
+      segments.forEach((segment, index) => {
+        const length = segment.end - segment.start + 1;
+        const midpoint = (segment.start + segment.end) / 2;
+        const centerDistance = Math.abs(midpoint - center);
+        if (length > bestLength || (length === bestLength && centerDistance < bestCenterDistance)) {
+          bestIndex = index;
+          bestLength = length;
+          bestCenterDistance = centerDistance;
+        }
+      });
+
+      return bestIndex;
+    }
+
+    function buildRowSegments(row) {
+      const segments = [];
+      let start = null;
+      for (let col = 0; col < gridModel.cols; col += 1) {
+        const slot = getSlot(gridModel, col, row);
+        if (!slot || !slot.enabled) {
+          if (start !== null) {
+            segments.push({ start, end: col - 1, axisSpan: gridModel.cols });
+            start = null;
+          }
+          continue;
+        }
+
+        const left = getSlot(gridModel, col - 1, row);
+        const connectedLeft = !!(left && left.enabled && left.links.right && slot.links.left);
+        if (start === null || !connectedLeft) {
+          if (start !== null) {
+            segments.push({ start, end: col - 1, axisSpan: gridModel.cols });
+          }
+          start = col;
+        }
+      }
+      if (start !== null) {
+        segments.push({ start, end: gridModel.cols - 1, axisSpan: gridModel.cols });
+      }
+      return segments;
+    }
+
+    function buildColSegments(col) {
+      const segments = [];
+      let start = null;
+      for (let row = 0; row < gridModel.rows; row += 1) {
+        const slot = getSlot(gridModel, col, row);
+        if (!slot || !slot.enabled) {
+          if (start !== null) {
+            segments.push({ start, end: row - 1, axisSpan: gridModel.rows });
+            start = null;
+          }
+          continue;
+        }
+
+        const up = getSlot(gridModel, col, row - 1);
+        const connectedUp = !!(up && up.enabled && up.links.down && slot.links.up);
+        if (start === null || !connectedUp) {
+          if (start !== null) {
+            segments.push({ start, end: row - 1, axisSpan: gridModel.rows });
+          }
+          start = row;
+        }
+      }
+      if (start !== null) {
+        segments.push({ start, end: gridModel.rows - 1, axisSpan: gridModel.rows });
+      }
+      return segments;
+    }
+
+    const xShiftMap = Array.from({ length: gridModel.rows }, () => Array(gridModel.cols).fill(0));
+    const yShiftMap = Array.from({ length: gridModel.rows }, () => Array(gridModel.cols).fill(0));
+
+    for (let row = 0; row < gridModel.rows; row += 1) {
+      const segments = buildRowSegments(row);
+      const anchorIndex = pickAnchorSegment(segments);
+      segments.forEach((segment, index) => {
+        const shift = breakGap * (index - anchorIndex);
+        for (let col = segment.start; col <= segment.end; col += 1) {
+          xShiftMap[row][col] = shift;
+        }
+      });
+    }
+
+    for (let col = 0; col < gridModel.cols; col += 1) {
+      const segments = buildColSegments(col);
+      const anchorIndex = pickAnchorSegment(segments);
+      segments.forEach((segment, index) => {
+        const shift = breakGap * (index - anchorIndex);
+        for (let row = segment.start; row <= segment.end; row += 1) {
+          yShiftMap[row][col] = shift;
+        }
+      });
+    }
+
+    for (let row = 0; row < gridModel.rows; row += 1) {
+      for (let col = 0; col < gridModel.cols; col += 1) {
+        const slot = getSlot(gridModel, col, row);
+        if (!slot || !slot.enabled) {
+          continue;
+        }
+
+        const left = col * step + xShiftMap[row][col];
+        const top = row * step + yShiftMap[row][col];
+        const rect = { left, top, width: cell, height: cell };
+        positions.set(makeCellKey(col, row), rect);
+        minLeft = Math.min(minLeft, rect.left);
+        minTop = Math.min(minTop, rect.top);
+        maxRight = Math.max(maxRight, rect.left + rect.width);
+        maxBottom = Math.max(maxBottom, rect.top + rect.height);
+      }
+    }
+
+    const normalizeX = Number.isFinite(minLeft) ? -minLeft : 0;
+    const normalizeY = Number.isFinite(minTop) ? -minTop : 0;
+    if (normalizeX || normalizeY) {
+      positions.forEach((rect) => {
+        rect.left += normalizeX;
+        rect.top += normalizeY;
+      });
+      maxRight += normalizeX;
+      maxBottom += normalizeY;
+    }
+
+    return {
+      cell,
+      gap,
+      step,
+      breakGap,
+      width: Math.max(0, maxRight),
+      height: Math.max(0, maxBottom),
+      positions
+    };
+  }
+
   function getPlacedItemRect(gridElement, cellMap, item, x = item.x, y = item.y) {
     const gridRect = gridElement.getBoundingClientRect();
     const cells = getItemFootprint(item)
@@ -1136,7 +1295,7 @@
     dragState.preview.classList.toggle("invalid", !dropTarget.canDrop);
   }
 
-  function applyCellBorders(cell, slot, gridModel, gridId) {
+  function applyCellBorders(cell, slot, gridModel) {
     const right = getSlot(gridModel, slot.col + 1, slot.row);
     const down = getSlot(gridModel, slot.col, slot.row + 1);
     const left = getSlot(gridModel, slot.col - 1, slot.row);
@@ -1145,11 +1304,6 @@
     const leftConnected = slot.links.left && left;
     const rightConnected = slot.links.right && right;
     const bottomConnected = slot.links.down && down;
-    const allowBreakGap = gridId !== "pockets";
-    const topBreakGap = allowBreakGap && up && up.enabled && !topConnected ? SLOT_BREAK_GAP_HALF : "0px";
-    const leftBreakGap = allowBreakGap && left && left.enabled && !leftConnected ? SLOT_BREAK_GAP_HALF : "0px";
-    const rightBreakGap = allowBreakGap && right && right.enabled && !rightConnected ? SLOT_BREAK_GAP_HALF : "0px";
-    const bottomBreakGap = allowBreakGap && down && down.enabled && !bottomConnected ? SLOT_BREAK_GAP_HALF : "0px";
 
     cell.style.borderTopColor = topConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
     cell.style.borderLeftColor = leftConnected ? SLOT_INNER_COLOR : SLOT_OUTER_COLOR;
@@ -1159,10 +1313,7 @@
     cell.style.borderLeftWidth = leftConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
     cell.style.borderRightWidth = rightConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
     cell.style.borderBottomWidth = bottomConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
-    cell.style.marginTop = topBreakGap;
-    cell.style.marginLeft = leftBreakGap;
-    cell.style.marginRight = rightBreakGap;
-    cell.style.marginBottom = bottomBreakGap;
+    cell.style.margin = "0";
   }
   function renderGrid(gridInfo, onItemClick, allowDrag = false) {
     const { el, model, items } = gridInfo;
@@ -1179,7 +1330,12 @@
     const visibleItems = sourcePlaceholder
       ? placed.filter((entry) => entry.id !== sourcePlaceholder.id)
       : placed;
+    const slotLayout = buildSlotLayoutMap(model, gridId, el);
     const cellMap = new Map();
+
+    el.style.width = `${slotLayout.width}px`;
+    el.style.height = `${slotLayout.height}px`;
+    el.style.minWidth = `${slotLayout.width}px`;
 
     for (let row = 0; row < model.rows; row += 1) {
       for (let col = 0; col < model.cols; col += 1) {
@@ -1188,19 +1344,27 @@
           continue;
         }
 
+        const cellRect = slotLayout.positions.get(makeCellKey(col, row));
+        if (!cellRect) {
+          continue;
+        }
+
         const cell = document.createElement("div");
         cell.className = "cell";
         cell.dataset.col = String(col);
         cell.dataset.row = String(row);
-        cell.style.gridColumn = String(col + 1);
-        cell.style.gridRow = String(row + 1);
-        applyCellBorders(cell, slot, model, gridId);
+        cell.style.left = `${cellRect.left}px`;
+        cell.style.top = `${cellRect.top}px`;
+        cell.style.width = `${cellRect.width}px`;
+        cell.style.height = `${cellRect.height}px`;
+        applyCellBorders(cell, slot, model);
         cellMap.set(makeCellKey(col, row), cell);
         el.appendChild(cell);
       }
     }
 
     el.__cellMap = cellMap;
+    el.__slotLayout = slotLayout;
 
     if (sourcePlaceholder) {
       const placeholder = document.createElement("div");
@@ -1628,6 +1792,10 @@
     console.error(error);
   });
 })();
+
+
+
+
 
 
 

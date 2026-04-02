@@ -356,10 +356,7 @@ select{
 }
 
 .grid{
-  display:grid;
-  grid-template-columns: repeat(var(--cols), var(--cell));
-  grid-template-rows: repeat(var(--rows), var(--cell));
-  gap: var(--gap);
+  display:block;
   background: rgba(0,0,0,.14);
   border: 0;
   width: fit-content;
@@ -379,10 +376,12 @@ select{
   box-shadow: none;
 }
 .cell{
+  position:absolute;
   width: var(--cell);
   height: var(--cell);
-  border:2px solid transparent;
+  border:1px solid transparent;
   background: #0c0c0c;
+  box-sizing:border-box;
   z-index: 1;
 }
 
@@ -631,6 +630,7 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
 
 
 
