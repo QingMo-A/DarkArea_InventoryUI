@@ -68,6 +68,7 @@ body{
   grid-template-columns: 3fr 2fr;
   gap: 12px;
   padding: 12px;
+  min-height: 0;
 }
 
 .left{
@@ -75,6 +76,8 @@ body{
   grid-template-columns: 1fr 1fr;
   gap:12px;
   min-width: 640px;
+  min-height: 0;
+  height: 100%;
 }
 
 .panel{
@@ -85,6 +88,7 @@ body{
   position:relative;
   overflow:hidden;
   min-height: 200px;
+  min-width: 0;
 }
 
 .panel-title{
@@ -120,6 +124,44 @@ body{
 
 .inventory-controls{
   display:none;
+}
+.inventory-panel{
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.inventory-panel-body{
+  flex:1;
+  min-height:0;
+  height:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #494b49 rgba(0,0,0,.18);
+}
+
+.inventory-panel-body::-webkit-scrollbar{
+  width: 10px;
+}
+
+.inventory-panel-body::-webkit-scrollbar-track{
+  background: rgba(0,0,0,.18);
+  border-left: 1px solid rgba(255,255,255,.05);
+}
+
+.inventory-panel-body::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, #5d615d, #494b49);
+  border: 2px solid rgba(0,0,0,0);
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+.inventory-panel-body::-webkit-scrollbar-thumb:hover{
+  background: linear-gradient(180deg, #6f746f, #5a5e5a);
+  border: 2px solid rgba(0,0,0,0);
+  background-clip: padding-box;
 }
 .equipment-panel{
   display:flex;
@@ -589,6 +631,11 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
+
+
+
+
 
 
 
