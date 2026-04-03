@@ -15,6 +15,72 @@
     return `${x}:${y}`;
   }
 
+  function clampChannel(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
+  }
+
+  function parseColorString(color) {
+    if (!color || color === "transparent") {
+      return null;
+    }
+
+    const value = String(color).trim();
+    if (!value) {
+      return null;
+    }
+
+    if (value.startsWith("#")) {
+      const hex = value.slice(1);
+      if (hex.length === 3) {
+        return {
+          r: parseInt(hex[0] + hex[0], 16),
+          g: parseInt(hex[1] + hex[1], 16),
+          b: parseInt(hex[2] + hex[2], 16),
+          a: 1
+        };
+      }
+      if (hex.length === 6) {
+        return {
+          r: parseInt(hex.slice(0, 2), 16),
+          g: parseInt(hex.slice(2, 4), 16),
+          b: parseInt(hex.slice(4, 6), 16),
+          a: 1
+        };
+      }
+    }
+
+    const match = value.match(/^rgba?\(([^)]+)\)$/i);
+    if (!match) {
+      return null;
+    }
+
+    const parts = match[1].split(",").map((part) => part.trim());
+    if (parts.length < 3) {
+      return null;
+    }
+
+    return {
+      r: Number(parts[0]),
+      g: Number(parts[1]),
+      b: Number(parts[2]),
+      a: parts.length >= 4 ? Number(parts[3]) : 1
+    };
+  }
+
+  function darkenColor(color, factor = 0.58, saturation = 1) {
+    const parsed = parseColorString(color);
+    if (!parsed) {
+      return null;
+    }
+
+    const avg = (parsed.r + parsed.g + parsed.b) / 3;
+    const r = avg + (parsed.r - avg) * saturation;
+    const g = avg + (parsed.g - avg) * saturation;
+    const b = avg + (parsed.b - avg) * saturation;
+
+    return `rgba(${clampChannel(r * factor)}, ${clampChannel(g * factor)}, ${clampChannel(b * factor)}, ${Number.isFinite(parsed.a) ? parsed.a : 1})`;
+  }
+
   function normalizeFootprint(footprint) {
     if (!Array.isArray(footprint) || footprint.length === 0) {
       return null;
@@ -1315,6 +1381,44 @@
     cell.style.borderBottomWidth = bottomConnected ? SLOT_INNER_WIDTH : SLOT_OUTER_WIDTH;
     cell.style.margin = "0";
   }
+  function applyItemGridTint(element, item) {
+    if (!element) {
+      return;
+    }
+
+    const borderColor = item && item.tint && item.tint !== "transparent"
+      ? darkenColor(item.tint, 0.5, 1.75)
+      : null;
+
+    if (borderColor) {
+      element.style.setProperty("--item-border-color", borderColor);
+    } else {
+      element.style.removeProperty("--item-border-color");
+    }
+  }
+  function tintOccupiedCellBorders(cellMap, item) {
+    if (!item || !item.tint || item.tint === "transparent") {
+      return;
+    }
+
+    const borderColor = darkenColor(item.tint, 0.56, 1.65);
+    if (!borderColor) {
+      return;
+    }
+
+    getItemFootprint(item).forEach((footprintCell) => {
+      const cell = cellMap.get(makeCellKey(item.x + footprintCell.x, item.y + footprintCell.y));
+      if (!cell) {
+        return;
+      }
+
+      cell.style.borderTopColor = borderColor;
+      cell.style.borderLeftColor = borderColor;
+      cell.style.borderRightColor = borderColor;
+      cell.style.borderBottomColor = borderColor;
+    });
+  }
+
   function renderGrid(gridInfo, onItemClick, allowDrag = false) {
     const { el, model, items } = gridInfo;
     el.style.setProperty("--cols", model.cols);
@@ -1792,6 +1896,13 @@
     console.error(error);
   });
 })();
+
+
+
+
+
+
+
 
 
 
