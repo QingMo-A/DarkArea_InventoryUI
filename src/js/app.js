@@ -1648,6 +1648,7 @@
       artSrc = "",
       overlayArtSrc = "",
       overlayOffsetPercent = 15,
+      titleArtSrc = "",
       showGrid = true
     } = options;
     const wrap = document.createElement("div");
@@ -1657,9 +1658,16 @@
     const head = document.createElement("div");
     head.className = "section-head";
 
-    const title = document.createElement("div");
-    title.className = "section-title";
-    title.textContent = titleText;
+    const title = titleArtSrc
+      ? document.createElement("img")
+      : document.createElement("div");
+    title.className = titleArtSrc ? "section-title-art" : "section-title";
+    if (titleArtSrc) {
+      title.src = titleArtSrc;
+      title.alt = titleText || "";
+    } else {
+      title.textContent = titleText;
+    }
 
     head.appendChild(title);
     if (rightNode) {
@@ -1721,7 +1729,9 @@
   function renderInventoryLayout() {
     dom.invLayout.innerHTML = "";
 
-    const pocketsSection = buildSection("\u53e3\u888b", null, "pocketsGrid");
+    const pocketsSection = buildSection("口袋", null, "pocketsGrid", {
+      titleArtSrc: "./pocket_title.png"
+    });
     const rigEquipment = getSelectedEquipment("rig");
     const bagEquipment = getSelectedEquipment("bag");
     const rigSection = buildSection("", null, "rigGrid", {
@@ -1896,6 +1906,8 @@
     console.error(error);
   });
 })();
+
+
 
 
 
