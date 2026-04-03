@@ -1,5 +1,5 @@
 {
-  "displayId": "汽车旅馆主客房钥匙",
+  "displayId": "旅馆主客房",
   "internalId": "motel_master_room_key",
   "texture": "motel_master_room_key.png",
   "tint": "#4C300F",

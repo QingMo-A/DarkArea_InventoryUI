@@ -1,5 +1,5 @@
 {
-  "displayId": "AOC机密档案室门禁卡",
+  "displayId": "AOC门禁卡",
   "internalId": "aoc_confidential_archives_access_card",
   "texture": "aoc_confidential_archives_access_card.png",
   "tint": "#4C300F",

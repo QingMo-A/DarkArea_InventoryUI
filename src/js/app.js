@@ -645,7 +645,8 @@
     containerSel: document.getElementById("containerSel"),
     containerGrid: document.getElementById("containerGrid"),
     containerTitle: document.getElementById("containerTitle"),
-    containerDetail: document.getElementById("containerDetail")
+    containerDetail: document.getElementById("containerDetail"),
+    itemTooltip: null
   };
 
   function escapeHtml(text) {
@@ -662,6 +663,53 @@
     const content = `<b>\u7269\u54c1\u52a0\u8f7d\u5931\u8d25\uff1a</b><pre style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(stack)}</pre>`;
     dom.invDetail.innerHTML = "\u5de6\u4fa7\u9ed8\u8ba4\u65e0\u7269\u54c1\uff08\u5168\u7a7a\uff09\u3002\u53ea\u6709\u53f3\u4fa7\u641c\u7d22\u5bb9\u5668\u6709\u7269\u54c1\u3002";
     dom.containerDetail.innerHTML = content;
+  }
+  function ensureItemTooltip() {
+    if (dom.itemTooltip) {
+      return dom.itemTooltip;
+    }
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "item-tooltip";
+    tooltip.innerHTML = `
+      <div class="item-tooltip-title"></div>
+      <div class="item-tooltip-meta"></div>
+      <div class="item-tooltip-desc"></div>
+    `;
+    document.body.appendChild(tooltip);
+    dom.itemTooltip = tooltip;
+    return tooltip;
+  }
+
+  function hideItemTooltip() {
+    const tooltip = ensureItemTooltip();
+    tooltip.classList.remove("visible");
+  }
+
+  function moveItemTooltip(clientX, clientY) {
+    const tooltip = ensureItemTooltip();
+    const offsetX = 18;
+    const offsetY = 18;
+    const rect = tooltip.getBoundingClientRect();
+    const maxLeft = window.innerWidth - rect.width - 8;
+    const maxTop = window.innerHeight - rect.height - 8;
+    const left = Math.max(8, Math.min(clientX + offsetX, maxLeft));
+    const top = Math.max(8, Math.min(clientY + offsetY, maxTop));
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function showItemTooltip(item, clientX, clientY) {
+    if (state.dragState) {
+      return;
+    }
+
+    const tooltip = ensureItemTooltip();
+    tooltip.querySelector(".item-tooltip-title").textContent = item.name || item.label || "";
+    tooltip.querySelector(".item-tooltip-meta").textContent = "";
+    tooltip.querySelector(".item-tooltip-desc").textContent = "";
+    tooltip.classList.add("visible");
+    moveItemTooltip(clientX, clientY);
   }
 
   async function fetchJsonFile(path) {
@@ -1514,6 +1562,17 @@
         item.style.removeProperty("--item-tint");
       }
 
+      item.addEventListener("mouseenter", (event) => {
+        showItemTooltip(itemData, event.clientX, event.clientY);
+      });
+
+      item.addEventListener("mousemove", (event) => {
+        moveItemTooltip(event.clientX, event.clientY);
+      });
+
+      item.addEventListener("mouseleave", () => {
+        hideItemTooltip();
+      });
       item.addEventListener("click", (event) => {
         event.stopPropagation();
         if (state.suppressClickId === itemData.id) {
@@ -1535,6 +1594,7 @@
           }
 
           event.preventDefault();
+          hideItemTooltip();
           const startX = event.clientX;
           const startY = event.clientY;
           const rect = item.getBoundingClientRect();
@@ -1861,6 +1921,7 @@
   }
 
   function rerenderAll() {
+    hideItemTooltip();
     renderInventoryLayout();
     renderInventoryGrids();
     renderContainer();
@@ -1913,10 +1974,15 @@
     }
   });
   initialize().catch((error) => {
+    hideItemTooltip();
     setLoadError(error);
     console.error(error);
   });
 })();
+
+
+
+
 
 
 
