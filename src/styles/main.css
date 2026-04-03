@@ -772,3 +772,22 @@ select{
 
 
 
+
+
+
+.equipment-row-single{
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.equipment-field-wide{
+  max-width:none;
+}
+
+.secure-section .section-body{
+  gap:0;
+}
+
+.secure-section .grid{
+  margin-top:-1px;
+}
+

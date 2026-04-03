@@ -558,6 +558,12 @@
   }
 
   const ITEM_INFO_INDEX_PATH = "./src/items/item_info/index.json";
+  const SECURE_BOX_OPTIONS = [
+    { id: "reinforced_safe_box", name: "加固安全箱", icon: "./reinforced_safe_box.png", cols: 2, rows: 1 },
+    { id: "bulletproof_safe_box", name: "防弹安全箱", icon: "./bulletproof_safe_box.png", cols: 2, rows: 2 },
+    { id: "composite_safe_box", name: "复合安全箱", icon: "./composite_safe_box.png", cols: 3, rows: 2 },
+    { id: "titanium_safe_box", name: "钛金安全箱", icon: "./titanium_safe_box.png", cols: 3, rows: 3 }
+  ];
   const ITEM_INFO_BASE_PATH = "./src/items/item_info";
   const ITEM_ICON_BASE_PATH = "./src/items/item_icons";
   const SLOT_ART = {
@@ -637,8 +643,10 @@
     bagSel: document.getElementById("bagSel"),
     equipRigSel: document.getElementById("equipRigSel"),
     equipBagSel: document.getElementById("equipBagSel"),
+    equipSecureSel: document.getElementById("equipSecureSel"),
     equipRigPicker: document.getElementById("equipRigPicker"),
     equipBagPicker: document.getElementById("equipBagPicker"),
+    equipSecurePicker: document.getElementById("equipSecurePicker"),
     secureSel: document.getElementById("secureSel"),
     invLayout: document.getElementById("invLayout"),
     invDetail: document.getElementById("invDetail"),
@@ -914,21 +922,43 @@
   }
 
   function getEquipmentSelect(kind) {
-    return kind === "rig" ? dom.equipRigSel : dom.equipBagSel;
+    if (kind === "rig") {
+      return dom.equipRigSel;
+    }
+    if (kind === "bag") {
+      return dom.equipBagSel;
+    }
+    if (kind === "secure") {
+      return dom.equipSecureSel || dom.secureSel;
+    }
+    return null;
   }
 
   function getEquipmentPicker(kind) {
-    return kind === "rig" ? dom.equipRigPicker : dom.equipBagPicker;
+    if (kind === "rig") {
+      return dom.equipRigPicker;
+    }
+    if (kind === "bag") {
+      return dom.equipBagPicker;
+    }
+    if (kind === "secure") {
+      return dom.equipSecurePicker;
+    }
+    return null;
   }
 
   function getEquipmentOptions(kind) {
+    if (kind === "secure") {
+      return SECURE_BOX_OPTIONS;
+    }
     return equipmentCatalog[kind] || [NONE_EQUIPMENT];
   }
 
   function getSelectedEquipment(kind) {
     const select = getEquipmentSelect(kind);
     const options = getEquipmentOptions(kind);
-    const selectedId = select ? select.value : NONE_EQUIPMENT.id;
+    const fallbackId = options[0] ? options[0].id : NONE_EQUIPMENT.id;
+    const selectedId = select && select.value ? select.value : fallbackId;
     return options.find((option) => option.id === selectedId) || options[0];
   }
 
@@ -945,9 +975,11 @@
       return;
     }
 
-    const previous = select.value || NONE_EQUIPMENT.id;
+    const options = getEquipmentOptions(kind);
+    const fallbackId = options[0] ? options[0].id : NONE_EQUIPMENT.id;
+    const previous = select.value || fallbackId;
     select.innerHTML = "";
-    getEquipmentOptions(kind).forEach((option) => {
+    options.forEach((option) => {
       const node = document.createElement("option");
       node.value = option.id;
       node.textContent = option.id === "none"
@@ -956,8 +988,8 @@
       select.appendChild(node);
     });
 
-    const hasPrevious = getEquipmentOptions(kind).some((option) => option.id === previous);
-    select.value = hasPrevious ? previous : NONE_EQUIPMENT.id;
+    const hasPrevious = options.some((option) => option.id === previous);
+    select.value = hasPrevious ? previous : fallbackId;
   }
 
   function renderEquipmentPicker(kind) {
@@ -1011,10 +1043,12 @@
   function syncEquipmentSelections() {
     renderEquipmentPicker("rig");
     renderEquipmentPicker("bag");
+    renderEquipmentPicker("secure");
   }
   function initializeEquipmentSelectors() {
     populateEquipmentSelect("rig");
     populateEquipmentSelect("bag");
+    populateEquipmentSelect("secure");
     syncEquipmentSelections();
   }
 
@@ -1246,14 +1280,14 @@
     }
     if (id === "secure") {
       const el = document.getElementById("secureGrid");
-      const size = parseSize(dom.secureSel.value);
+      const secureBox = getSelectedEquipment("secure");
       return {
         id,
         el,
-        cols: size.cols,
-        rows: size.rows,
+        cols: secureBox.cols,
+        rows: secureBox.rows,
         items: state.secureItems,
-        model: buildGridModel(id, size.cols, size.rows)
+        model: buildGridModel(id, secureBox.cols, secureBox.rows)
       };
     }
 
@@ -1815,7 +1849,11 @@
       overlayArtSrc: isEquippedValue(bagEquipment.id) ? getSelectedEquipmentIcon("bag") : "",
       showGrid: isEquippedValue(bagEquipment.id)
     });
-    const secureSection = buildSection("\u5b89\u5168\u7bb1\uff08\u4fdd\u9669\uff09", buildPinButton(), "secureGrid");
+    const secureBox = getSelectedEquipment("secure");
+    const secureSection = buildSection("", buildPinButton(), "secureGrid", {
+      artSrc: secureBox.icon
+    });
+    secureSection.classList.add("secure-section");
 
     if (!state.isSecurePinned) {
       const one = document.createElement("div");
@@ -1860,7 +1898,7 @@
     const bagEquipment = getSelectedEquipment("bag");
     const rigKey = rigEquipment.id;
     const bagKey = bagEquipment.id;
-    const secureKey = dom.secureSel.value;
+    const secureKey = getSelectedEquipment("secure").id;
 
     if (isEquippedValue(rigKey)) {
       if (state.rigItems.length && state.rigSizeKey && state.rigSizeKey !== rigKey && state.rigSizeKey !== "none") {
@@ -1945,6 +1983,13 @@
   [dom.secureSel].forEach((select) => {
     select.addEventListener("change", renderInventoryGrids);
   });
+  [dom.secureSel, dom.equipSecureSel].filter(Boolean).forEach((select) => {
+    select.addEventListener("change", () => {
+      syncEquipmentSelections();
+      renderInventoryLayout();
+      renderInventoryGrids();
+    });
+  });
   [dom.equipRigSel, dom.equipBagSel].forEach((select) => {
     if (!select) {
       return;
@@ -1979,6 +2024,15 @@
     console.error(error);
   });
 })();
+
+
+
+
+
+
+
+
+
 
 
 
