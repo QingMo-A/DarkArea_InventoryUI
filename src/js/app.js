@@ -1576,7 +1576,7 @@
 
       if (overlayArtSrc) {
         const overlay = document.createElement("img");
-        overlay.className = "section-equipped-art";
+        overlay.className = `section-equipped-art${gridId === "bagGrid" ? " bag-equipped-art" : ""}`;
         overlay.src = overlayArtSrc;
         overlay.alt = "";
         overlay.style.top = `${overlayOffsetPercent}%`;
@@ -1792,6 +1792,11 @@
     console.error(error);
   });
 })();
+
+
+
+
+
 
 
 

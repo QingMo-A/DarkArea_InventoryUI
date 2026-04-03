@@ -318,6 +318,7 @@ select{
   object-fit:contain;
 }
 
+
 .section-equipped-art{
   position:absolute;
   left:0;
@@ -325,6 +326,12 @@ select{
   height:auto;
   object-fit:contain;
   pointer-events:none;
+}
+
+.section-equipped-art.bag-equipped-art{
+  left:7.5%;
+  width:85%;
+  transform: translateY(9%);
 }
 
 .art-offset-section{
@@ -630,6 +637,14 @@ select{
   .layout{ grid-template-columns: 1fr; }
   .left{ grid-template-columns: 1fr; min-width: unset; }
 }
+
+
+
+
+
+
+
+
 
 
 

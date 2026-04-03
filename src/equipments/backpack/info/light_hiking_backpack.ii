@@ -4,11 +4,10 @@ type=backpack
 icon=light_hiking_backpack.png
 
 [grid]
-######
-######
-######
-######
-######
+###
+###
+###
+###
 [/grid]
 
 [breaks]

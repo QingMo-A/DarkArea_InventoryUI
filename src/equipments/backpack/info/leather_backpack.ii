@@ -4,13 +4,23 @@ type=backpack
 icon=leather_backpack.png
 
 [grid]
-######
-######
-######
-######
-######
+#####
+#####
+#####
+#####
+#####
 [/grid]
 
 [breaks]
+0,0:d
+1,0:d
+2,0:d
+3,0:d
+4,0:d
+0,1:u
+1,1:u
+2,1:u
+3,1:u
+4,1:u
 [/breaks]
 

@@ -4,12 +4,18 @@ type=rig
 icon=926_advanced_combat_chest_rig.png
 
 [grid]
-######
-######
-######
-######
+####
+####
+####
+####
+####
+####
 [/grid]
 
 [breaks]
+0,0:r
+0,1:r
+0,1:d
+
 [/breaks]
 
