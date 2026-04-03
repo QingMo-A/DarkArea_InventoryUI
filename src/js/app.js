@@ -1823,7 +1823,8 @@
     button.title = state.isSecurePinned
       ? "\u53d6\u6d88\u56fe\u9489\u62c6\u5206"
       : "\u56fe\u9489\u5230\u53f3\u4fa7\u680f";
-    button.textContent = "\u56fe\u9489";
+    button.setAttribute("role", "button");
+    button.setAttribute("aria-label", button.title);
     button.addEventListener("click", () => {
       state.isSecurePinned = !state.isSecurePinned;
       renderInventoryLayout();
@@ -1850,10 +1851,11 @@
       showGrid: isEquippedValue(bagEquipment.id)
     });
     const secureBox = getSelectedEquipment("secure");
-    const secureSection = buildSection("", buildPinButton(), "secureGrid", {
+    const secureSection = buildSection("", null, "secureGrid", {
       artSrc: secureBox.icon
     });
     secureSection.classList.add("secure-section");
+    secureSection.querySelector(".section-body")?.appendChild(buildPinButton());
 
     if (!state.isSecurePinned) {
       const one = document.createElement("div");
@@ -2024,6 +2026,9 @@
     console.error(error);
   });
 })();
+
+
+
 
 
 

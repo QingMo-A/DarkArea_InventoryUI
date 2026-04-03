@@ -784,10 +784,47 @@ select{
 }
 
 .secure-section .section-body{
+  position:relative;
   gap:0;
 }
 
 .secure-section .grid{
   margin-top:-1px;
 }
+
+.secure-section .pin-btn{
+  position:absolute;
+  left:126px;
+  top:-22px;
+  width:42px;
+  height:21px;
+  transform:none;
+  background: transparent url("../../push_pin.png") center/contain no-repeat;
+  border:0;
+  box-shadow:none;
+  color:transparent;
+  z-index:3;
+}
+
+.secure-section .pin-btn:hover{
+  border-color:transparent;
+  box-shadow:none;
+  filter: brightness(1.08);
+}
+
+.secure-section .pin-btn.pinned{
+  background-color:transparent;
+  border-color:transparent;
+  filter: brightness(1.18);
+}
+
+
+
+
+
+.secure-section .section-head{
+  display:none;
+}
+
+
 
