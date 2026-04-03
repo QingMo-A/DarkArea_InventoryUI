@@ -1,9 +1,12 @@
 {
-  "displayId": "卡",
+  "displayId": "AOC机密档案室门禁卡",
   "internalId": "aoc_confidential_archives_access_card",
   "texture": "aoc_confidential_archives_access_card.png",
   "tint": "#4C300F",
-  "size": { "w": 1, "h": 1 },
+  "size": {
+    "w": 1,
+    "h": 1
+  },
   "category": "钥匙",
   "name": "AOC机密档案室门禁卡",
   "desc": "1格(1×1)"

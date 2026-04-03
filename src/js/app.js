@@ -1397,25 +1397,32 @@
     }
   }
   function tintOccupiedCellBorders(cellMap, item) {
-    if (!item || !item.tint || item.tint === "transparent") {
+    if (!item) {
       return;
     }
 
-    const borderColor = darkenColor(item.tint, 0.56, 1.65);
-    if (!borderColor) {
-      return;
-    }
+    const footprint = getItemFootprint(item);
+    const footprintKeys = new Set(footprint.map((cell) => makeCellKey(cell.x, cell.y)));
+    const borderColor = "#000000";
 
-    getItemFootprint(item).forEach((footprintCell) => {
+    footprint.forEach((footprintCell) => {
       const cell = cellMap.get(makeCellKey(item.x + footprintCell.x, item.y + footprintCell.y));
       if (!cell) {
         return;
       }
 
-      cell.style.borderTopColor = borderColor;
-      cell.style.borderLeftColor = borderColor;
-      cell.style.borderRightColor = borderColor;
-      cell.style.borderBottomColor = borderColor;
+      if (!footprintKeys.has(makeCellKey(footprintCell.x, footprintCell.y - 1))) {
+        cell.style.borderTopColor = borderColor;
+      }
+      if (!footprintKeys.has(makeCellKey(footprintCell.x - 1, footprintCell.y))) {
+        cell.style.borderLeftColor = borderColor;
+      }
+      if (!footprintKeys.has(makeCellKey(footprintCell.x + 1, footprintCell.y))) {
+        cell.style.borderRightColor = borderColor;
+      }
+      if (!footprintKeys.has(makeCellKey(footprintCell.x, footprintCell.y + 1))) {
+        cell.style.borderBottomColor = borderColor;
+      }
     });
   }
 
@@ -1470,13 +1477,17 @@
     el.__cellMap = cellMap;
     el.__slotLayout = slotLayout;
 
+    visibleItems.forEach((itemData) => {
+      tintOccupiedCellBorders(cellMap, itemData);
+    });
+
     if (sourcePlaceholder) {
       const placeholder = document.createElement("div");
       placeholder.className = `item source-placeholder${sourcePlaceholder.rotated ? " rotated" : ""}`;
       const placeholderIconStyle = sourcePlaceholder.texture ? `style="background-image:url('${sourcePlaceholder.texture}')"` : "";
       placeholder.innerHTML = `
         <div class="icon" ${placeholderIconStyle}></div>
-        <div class="label">${sourcePlaceholder.name}</div>
+        <div class="label">${sourcePlaceholder.label}</div>
         <div class="meta"></div>
       `;
       placeholder.style.setProperty("--item-tint", "transparent");
@@ -1494,7 +1505,7 @@
       const iconStyle = itemData.texture ? `style="background-image:url('${itemData.texture}')"` : "";
       item.innerHTML = `
         <div class="icon" ${iconStyle}></div>
-        <div class="label">${itemData.name}</div>
+        <div class="label">${itemData.label}</div>
         <div class="meta"></div>
       `;
       if (itemData.tint && itemData.tint !== "transparent") {
@@ -1906,6 +1917,10 @@
     console.error(error);
   });
 })();
+
+
+
+
 
 
 
