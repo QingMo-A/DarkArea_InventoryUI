@@ -429,6 +429,9 @@ select{
   --item-fill: var(--item-tint, rgba(255,255,255,.06));
   --item-fill-opacity: .78;
   --item-hover-overlay: transparent;
+  --item-sheen-top: rgba(255,255,255,.05);
+  --item-sheen-mid: rgba(255,255,255,.015);
+  --item-sheen-bottom: rgba(0,0,0,.08);
   position:relative;
   z-index: 2;
   border:1px solid var(--item-border-color, #434444);
@@ -463,6 +466,7 @@ select{
   z-index:1;
   background:
     linear-gradient(var(--item-hover-overlay), var(--item-hover-overlay)),
+    linear-gradient(180deg, var(--item-sheen-top) 0%, var(--item-sheen-mid) 42%, var(--item-sheen-bottom) 100%),
     var(--item-fill);
   opacity: var(--item-fill-opacity);
 }
@@ -521,7 +525,10 @@ select{
 .item.drop-preview{
   --item-mask-fill: rgba(34,64,36,.82);
   --item-fill: rgba(34,64,36,.82);
-  --item-fill-opacity: .78;
+  --item-fill-opacity: .78;
+  --item-sheen-top: transparent;
+  --item-sheen-mid: transparent;
+  --item-sheen-bottom: transparent;
   opacity: 0.58;
   border-color: #4a5d4b;
   background: transparent;
@@ -531,7 +538,10 @@ select{
 
 .item.drop-preview.invalid{
   --item-mask-fill: rgba(62,18,21,.82);
-  --item-fill: rgba(62,18,21,.82);
+  --item-fill: rgba(62,18,21,.82);
+  --item-sheen-top: transparent;
+  --item-sheen-mid: transparent;
+  --item-sheen-bottom: transparent;
   border-color: #6a4447;
   background: transparent;
   box-shadow: none;
@@ -544,6 +554,9 @@ select{
   --item-mask-fill: transparent;
   --item-tint: transparent;
   --item-fill: transparent;
+  --item-sheen-top: transparent;
+  --item-sheen-mid: transparent;
+  --item-sheen-bottom: transparent;
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -566,6 +579,9 @@ select{
   --item-mask-fill: transparent;
   --item-tint: transparent;
   --item-fill: transparent;
+  --item-sheen-top: transparent;
+  --item-sheen-mid: transparent;
+  --item-sheen-bottom: transparent;
 }
 
 .drag-ghost .internal-lines,
@@ -588,6 +604,9 @@ select{
   --item-mask-fill: transparent;
   --item-tint: transparent;
   --item-fill: transparent;
+  --item-sheen-top: transparent;
+  --item-sheen-mid: transparent;
+  --item-sheen-bottom: transparent;
 }
 
 .source-placeholder .internal-lines,
@@ -846,21 +865,6 @@ select{
 .secure-section .section-head{
   display:none;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
