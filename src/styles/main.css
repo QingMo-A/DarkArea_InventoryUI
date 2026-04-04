@@ -135,30 +135,54 @@ body{
   flex:1;
   min-height:0;
   height:auto;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.inventory-scroll-content{
+  flex:1;
+  min-height:0;
   overflow-y:auto;
   overflow-x:hidden;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: #494b49 rgba(0,0,0,.18);
+  padding-right:2px;
 }
 
-.inventory-panel-body::-webkit-scrollbar{
+.inventory-pinned-host{
+  display:none;
+  flex:0 0 auto;
+  padding:10px 12px 12px;
+  background: rgba(0,0,0,.12);
+}
+
+.inventory-pinned-host.active{
+  display:block;
+}
+
+.inventory-pinned-host .art-offset-section{
+  margin-top:0;
+}
+
+.inventory-scroll-content::-webkit-scrollbar{
   width: 10px;
 }
 
-.inventory-panel-body::-webkit-scrollbar-track{
+.inventory-scroll-content::-webkit-scrollbar-track{
   background: rgba(0,0,0,.18);
   border-left: 1px solid rgba(255,255,255,.05);
 }
 
-.inventory-panel-body::-webkit-scrollbar-thumb{
+.inventory-scroll-content::-webkit-scrollbar-thumb{
   background: linear-gradient(180deg, #5d615d, #494b49);
   border: 2px solid rgba(0,0,0,0);
   background-clip: padding-box;
   border-radius: 999px;
 }
 
-.inventory-panel-body::-webkit-scrollbar-thumb:hover{
+.inventory-scroll-content::-webkit-scrollbar-thumb:hover{
   background: linear-gradient(180deg, #6f746f, #5a5e5a);
   border: 2px solid rgba(0,0,0,0);
   background-clip: padding-box;
@@ -580,9 +604,11 @@ select{
   position:absolute;
   top:2px;
   left:2px;
+  width:250px;
+  font-family:"SimSun", "Songti SC", serif;
   font-size:12px;
-  font-weight:700;
-  color:#fff;
+  font-weight:400;
+  color:#bfc6bf;
   text-shadow:
     -1px 0 0 #000,
     1px 0 0 #000,
@@ -591,7 +617,12 @@ select{
     -1px -1px 0 #000,
     1px -1px 0 #000,
     -1px 1px 0 #000,
-    1px 1px 0 #000;
+    1px 1px 0 #000,
+    -2px 0 0 #000,
+    2px 0 0 #000,
+    0 -2px 0 #000,
+    0 2px 0 #000,
+    0 1px 1px rgba(0,0,0,0.6);
   opacity:.95;
   padding:0;
   background: transparent;
@@ -619,12 +650,6 @@ select{
 .inv-vbox-one{ display:flex; flex-direction:column; gap:12px; }
 .inv-vbox-two{ display:flex; flex-direction:column; gap:12px; }
 .vbox{ display:flex; flex-direction:column; gap:12px; }
-
-.secure-box{
-  padding: 10px;
-  border: 0;
-  background: rgba(0,0,0,.16);
-}
 
 .detail{
   margin-top: 10px;
@@ -825,6 +850,18 @@ select{
 .secure-section .section-head{
   display:none;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -649,6 +649,7 @@
     equipSecurePicker: document.getElementById("equipSecurePicker"),
     secureSel: document.getElementById("secureSel"),
     invLayout: document.getElementById("invLayout"),
+    invPinnedHost: document.getElementById("invPinnedHost"),
     invDetail: document.getElementById("invDetail"),
     containerSel: document.getElementById("containerSel"),
     containerGrid: document.getElementById("containerGrid"),
@@ -1834,6 +1835,10 @@
   }
   function renderInventoryLayout() {
     dom.invLayout.innerHTML = "";
+    if (dom.invPinnedHost) {
+      dom.invPinnedHost.innerHTML = "";
+      dom.invPinnedHost.classList.remove("active");
+    }
 
     const pocketsSection = buildSection("口袋", null, "pocketsGrid", {
       titleArtSrc: "./pocket_title.png"
@@ -1857,33 +1862,23 @@
     secureSection.classList.add("secure-section");
     secureSection.querySelector(".section-body")?.appendChild(buildPinButton());
 
+    const mainColumn = document.createElement("div");
+    mainColumn.className = "inv-vbox-one";
+    mainColumn.appendChild(pocketsSection);
+    mainColumn.appendChild(rigSection);
+    mainColumn.appendChild(bagSection);
+
     if (!state.isSecurePinned) {
-      const one = document.createElement("div");
-      one.className = "inv-vbox-one";
-      one.appendChild(pocketsSection);
-      one.appendChild(rigSection);
-      one.appendChild(bagSection);
-      one.appendChild(secureSection);
-      dom.invLayout.appendChild(one);
+      mainColumn.appendChild(secureSection);
+      dom.invLayout.appendChild(mainColumn);
       return;
     }
 
-    const two = document.createElement("div");
-    two.className = "inv-vbox-two";
-
-    const firstColumn = document.createElement("div");
-    firstColumn.className = "vbox";
-    firstColumn.appendChild(pocketsSection);
-    firstColumn.appendChild(rigSection);
-    firstColumn.appendChild(bagSection);
-
-    const secondColumn = document.createElement("div");
-    secondColumn.className = "vbox secure-box";
-    secondColumn.appendChild(secureSection);
-
-    two.appendChild(firstColumn);
-    two.appendChild(secondColumn);
-    dom.invLayout.appendChild(two);
+    dom.invLayout.appendChild(mainColumn);
+    if (dom.invPinnedHost) {
+      dom.invPinnedHost.classList.add("active");
+      dom.invPinnedHost.appendChild(secureSection);
+    }
   }
   function ensureContainerItems(cols, rows) {
     const sizeKey = `${cols}x${rows}`;

@@ -49,44 +49,47 @@
         <div class="panel inventory-panel">
           <div class="panel-title">物品</div>
           <div class="panel-body inventory-panel-body">
-            <div class="controls inventory-controls">
-              <label>口袋
-                <select id="pocketsSel">
-                  <option value="4x1">固定 4格（4×1）</option>
-                </select>
-              </label>
-              <label>弹挂
-                <select id="rigSel">
-                  <option value="none" selected>未装备</option>
-                  <option value="4x3">轻（4×3）</option>
-                  <option value="5x4">中（5×4）</option>
-                  <option value="6x4">重（6×4）</option>
-                </select>
-              </label>
-              <label>背包
-                <select id="bagSel">
-                  <option value="none" selected>未装备</option>
-                  <option value="6x5">小（6×5）</option>
-                  <option value="7x6">中（7×6）</option>
-                  <option value="8x7">大（8×7）</option>
-                </select>
-              </label>
-              <label>安全箱
-                <select id="secureSel">
-                  <option value="2x1">2格</option>
-                  <option value="2x2">4格</option>
-                  <option value="3x2">6格</option>
-                  <option value="4x2">8格</option>
-                  <option value="3x3">9格</option>
-                </select>
-              </label>
-            </div>
+            <div class="inventory-scroll-content">
+              <div class="controls inventory-controls">
+                <label>口袋
+                  <select id="pocketsSel">
+                    <option value="4x1">固定 4格（4×1）</option>
+                  </select>
+                </label>
+                <label>弹挂
+                  <select id="rigSel">
+                    <option value="none" selected>未装备</option>
+                    <option value="4x3">轻（4×3）</option>
+                    <option value="5x4">中（5×4）</option>
+                    <option value="6x4">重（6×4）</option>
+                  </select>
+                </label>
+                <label>背包
+                  <select id="bagSel">
+                    <option value="none" selected>未装备</option>
+                    <option value="6x5">小（6×5）</option>
+                    <option value="7x6">中（7×6）</option>
+                    <option value="8x7">大（8×7）</option>
+                  </select>
+                </label>
+                <label>安全箱
+                  <select id="secureSel">
+                    <option value="2x1">2格</option>
+                    <option value="2x2">4格</option>
+                    <option value="3x2">6格</option>
+                    <option value="4x2">8格</option>
+                    <option value="3x3">9格</option>
+                  </select>
+                </label>
+              </div>
 
-            <div id="invLayout"></div>
+              <div id="invLayout"></div>
 
-            <div class="detail" id="invDetail">
-              左侧默认无物品（全空）。图钉启用后：保险会被分到 VBox2（在下面）。
+              <div class="detail" id="invDetail">
+                左侧默认无物品（全空）。图钉启用后：保险会固定在物品分区底部。
+              </div>
             </div>
+            <div id="invPinnedHost" class="inventory-pinned-host"></div>
           </div>
         </div>
       </div>
@@ -125,6 +128,7 @@
   <script defer src="./src/js/app.js"></script>
 </body>
 </html>
+
 
 
 
